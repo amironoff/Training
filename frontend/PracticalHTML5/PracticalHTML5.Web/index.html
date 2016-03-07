@@ -2,17 +2,27 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <title></title>
+    <link href="Styles/Layout.css" rel="stylesheet" />
 </head>
+
 <body>
-    <header>
+    <header id="mainHeader">
         <div>
             <a class="headerlogo" href="index.html">
-                <img src="Images/logo.png"/>
+                <img src="Images/logo.png" />
             </a>
             <span id="headername">Joe's Coffee Store</span>
+            <input type="search" class="searchbox" placeholder="Search our store" />
         </div>
+
     </header>
-    
+    <div id="welcomeimage">
+        <img src="Images/coffeeheader.jpg" />
+    </div>
+    <div id="coffeeofthemonth">
+        <img src="Images/cotm.jpg" />
+    </div>
+
     <section id="welcometext">
         <header>Welcome to Joe's Coffee Store!</header>
         <span>
@@ -53,6 +63,34 @@
                     Add to Cart
                 </div>
             </article>
+            <article class="productarticle">
+                <figure>
+                    <img class="productarticlethumbnail" src="Images/coffee/coffee1.jpg" />
+                </figure>
+                <header>
+                    <span class="productarticlename">
+                        <a href="coffeedetails.html">Coffee 2</a>
+                    </span>
+                </header>
+                <p class="productarticleprice">10 EUR</p>
+                <div class="addtocartbutton">
+                    Add to Cart
+                </div>
+            </article>
+            <article class="productarticle">
+                <figure>
+                    <img class="productarticlethumbnail" src="Images/coffee/coffee1.jpg" />
+                </figure>
+                <header>
+                    <span class="productarticlename">
+                        <a href="coffeedetails.html">Coffee 3</a>
+                    </span>
+                </header>
+                <p class="productarticleprice">10 EUR</p>
+                <div class="addtocartbutton" id="myAddToCartButton">
+                    Add to Cart
+                </div>
+            </article>
         </section>
     </section>
     
@@ -60,5 +98,6 @@
         <p>Our address is <address>1 street New York.</address></p>
         <p class="smalltext">This page was generated on <time>09:25:00</time>.</p>
     </footer>
+    <script src="Scripts/myScript.js"></script>
 </body>
 </html>
