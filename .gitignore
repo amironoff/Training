@@ -1,3 +1,16 @@
+AdvancedSparkAnalytics
+CSharpInDepth
+Minesweeper
+MinesweeperV2
+nopcommerce
+TextStatistics
+bin
+obj
+packages
+.vs
+.suo
+*.csproj.user
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
