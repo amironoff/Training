@@ -82,6 +82,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="allcoffees.html" />
+    <Content Include="checkout.html" />
     <Content Include="coffeedetails.html" />
     <Content Include="Images\coffeeheader.jpg" />
     <Content Include="Images\coffeeheader.old.jpg" />
