@@ -9,6 +9,11 @@ header {
     font-weight: bold;
 }
 
+@font-face{
+    font-family:headerfront; /* this name will be used within the code.*/
+    src:url('../Lobster_1.3.otf');
+}
+
 .headerlogo {
     float: left;
     margin-right: 10px;
@@ -54,7 +59,10 @@ nav {
     }
 
 .backgroundgradient {
-    background-color:#603813;
+    background: -webkit-linear-gradient(left, #603813, #341c05); /* Safari 5.1 top 6.0 */
+    background: -o-linear-gradient(right, #603813, #341c05); /* Opera 11.1 to 12.0 */
+    background: -moz-linear-gradient(right, #603813, #341c05); /* Firefox 3.6 to 15 */
+    background: linear-gradient(to right, #603813, #341c05);
 }
 
 .searchbox {
@@ -65,11 +73,13 @@ nav {
 }
 
 #headername {
+    font-family:headerfront;
     font-size: 40px;
     color: #603813;
     padding: 15px;
     margin: 8px 0px;
     font-weight: bold;
+    text-shadow: 5px 5px 5px #5f2c17;
 }
 
 #welcomeimage {
@@ -88,6 +98,8 @@ nav {
     font-size: 12px;
     margin-top: 20px;
     margin-bottom: 20px;
+    column-count:2;
+    -webkit-column-count: 2;
 }
 
     #welcometext > header {
@@ -192,6 +204,7 @@ footer {
     background-color: #5c5045;
     margin: 20px 0px 20px;
     padding: 5px;
+    transform: skew(10deg, 10deg);
 }
 
 .smalltext {
