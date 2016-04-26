@@ -1,0 +1,8 @@
+﻿Group: Widgets
+FriendlyName: Promo Slider
+SystemName: Widgets.PromoSlider
+Version: 1.20
+SupportedVersions: 3.60
+Author: Andrey Mironoff
+DisplayOrder: 1
+FileName: Nop.Plugin.Widget.Promoslider.dll
