@@ -103,6 +103,7 @@
     <Compile Include="Domain\PromoImage.cs" />
     <Compile Include="Domain\PromoSlider.cs" />
     <Compile Include="Infrastructure\PromoSliderDependencyRegistrar.cs" />
+    <Compile Include="PromoSliderPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

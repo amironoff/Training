@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{E4ACA93B-D3DE-4557-B069-F1DB42925A4B}"
 EndProject
@@ -86,6 +86,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nop.Plugin.Misc.FacebookShop", "Plugins\Nop.Plugin.Misc.FacebookShop\Nop.Plugin.Misc.FacebookShop.csproj", "{6216A5CA-8599-4B53-8E70-F21CC6D4273C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nop.Plugin.Widget.PromoSliderPlugin", "Plugins\Nop.Plugin.Widget.Promoslider\Nop.Plugin.Widget.PromoSliderPlugin.csproj", "{9D7F7527-47A7-4309-816D-1A532BC6CCE0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6BDA8332-939F-45B7-A25E-7A797260AE59} = {6BDA8332-939F-45B7-A25E-7A797260AE59}
+		{75FD4163-333C-4DD5-854D-2EF294E45D94} = {75FD4163-333C-4DD5-854D-2EF294E45D94}
+		{210541AD-F659-47DA-8763-16F36C5CD2F4} = {210541AD-F659-47DA-8763-16F36C5CD2F4}
+		{CCD7F2C9-6A2C-4CF0-8E89-076B8FC0F144} = {CCD7F2C9-6A2C-4CF0-8E89-076B8FC0F144}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
