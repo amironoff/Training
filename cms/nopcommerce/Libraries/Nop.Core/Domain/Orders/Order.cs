@@ -200,7 +200,7 @@ namespace Nop.Core.Domain.Orders
         public decimal RefundedAmount { get; set; }
 
         /// <summary>
-        /// Gets or sets the value indicating whether reward points were earned for this order
+        /// Gets or sets the value indicating whether reward points were earned (gained) for placing this order
         /// </summary>
         public bool RewardPointsWereAdded { get; set; }
         
@@ -349,7 +349,7 @@ namespace Nop.Core.Domain.Orders
         public virtual Address ShippingAddress { get; set; }
         
         /// <summary>
-        /// Gets or sets the reward points history record
+        /// Gets or sets the reward points history record (spent by a customer when placing this order)
         /// </summary>
         public virtual RewardPointsHistory RedeemedRewardPointsEntry { get; set; }
 

@@ -5,14 +5,15 @@ namespace Nop.Core.Domain
     public class StoreInformationSettings : ISettings
     {
         /// <summary>
+        /// Gets or sets a value indicating whether "powered by nopCommerce" text should be displayed.
+        /// Please find more info at http://www.nopcommerce.com/copyrightremoval.aspx
+        /// </summary>
+        public bool HidePoweredByNopCommerce { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether store is closed
         /// </summary>
         public bool StoreClosed { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether administrators can visit a closed store
-        /// </summary>
-        public bool StoreClosedAllowForAdmins { get; set; }
 
         /// <summary>
         /// Gets or sets a default store theme

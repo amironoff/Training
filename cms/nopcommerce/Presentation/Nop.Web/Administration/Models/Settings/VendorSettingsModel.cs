@@ -19,5 +19,17 @@ namespace Nop.Admin.Models.Settings
         [NopResourceDisplayName("Admin.Configuration.Settings.Vendor.AllowCustomersToContactVendors")]
         public bool AllowCustomersToContactVendors { get; set; }
         public bool AllowCustomersToContactVendors_OverrideForStore { get; set; }
+
+        [NopResourceDisplayName("Admin.Configuration.Settings.Vendor.AllowCustomersToApplyForVendorAccount")]
+        public bool AllowCustomersToApplyForVendorAccount { get; set; }
+        public bool AllowCustomersToApplyForVendorAccount_OverrideForStore { get; set; }
+
+        [NopResourceDisplayName("Admin.Configuration.Settings.Vendor.AllowSearchByVendor")]
+        public bool AllowSearchByVendor { get; set; }
+        public bool AllowSearchByVendor_OverrideForStore { get; set; }
+
+        [NopResourceDisplayName("Admin.Configuration.Settings.Vendor.MaximumProductNumber")]
+        public int MaximumProductNumber { get; set; }
+        public bool MaximumProductNumber_OverrideForStore { get; set; }
     }
 }

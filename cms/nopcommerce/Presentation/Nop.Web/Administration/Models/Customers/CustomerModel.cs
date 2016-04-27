@@ -16,7 +16,7 @@ namespace Nop.Admin.Models.Customers
         public CustomerModel()
         {
             this.AvailableTimeZones = new List<SelectListItem>();
-            this.SendEmail = new SendEmailModel();
+            this.SendEmail = new SendEmailModel() { SendImmediately = true };
             this.SendPm = new SendPmModel();
             this.AvailableCustomerRoles = new List<CustomerRoleModel>();
             this.AssociatedExternalAuthRecords = new List<AssociatedExternalAuthModel>();
@@ -24,6 +24,8 @@ namespace Nop.Admin.Models.Customers
             this.AvailableStates = new List<SelectListItem>();
             this.AvailableVendors = new List<SelectListItem>();
             this.CustomerAttributes = new List<CustomerAttributeModel>();
+            this.AvailableNewsletterSubscriptionStores = new List<StoreModel>();
+            this.RewardPointsAvailableStores = new List<SelectListItem>();
         }
 
         public bool AllowUsersToChangeUsernames { get; set; }
@@ -181,20 +183,28 @@ namespace Nop.Admin.Models.Customers
         public int[] SelectedCustomerRoleIds { get; set; }
 
 
-
+        //newsletter subscriptions (per store)
+        [NopResourceDisplayName("Admin.Customers.Customers.Fields.Newsletter")]
+        public List<StoreModel> AvailableNewsletterSubscriptionStores { get; set; }
+        [NopResourceDisplayName("Admin.Customers.Customers.Fields.Newsletter")]
+        public int[] SelectedNewsletterSubscriptionStoreIds { get; set; }
 
 
 
         //reward points history
         public bool DisplayRewardPointsHistory { get; set; }
-
         [NopResourceDisplayName("Admin.Customers.Customers.RewardPoints.Fields.AddRewardPointsValue")]
         public int AddRewardPointsValue { get; set; }
-
         [NopResourceDisplayName("Admin.Customers.Customers.RewardPoints.Fields.AddRewardPointsMessage")]
         [AllowHtml]
         public string AddRewardPointsMessage { get; set; }
-        
+        [NopResourceDisplayName("Admin.Customers.Customers.RewardPoints.Fields.AddRewardPointsStore")]
+        public int AddRewardPointsStoreId { get; set; }
+        [NopResourceDisplayName("Admin.Customers.Customers.RewardPoints.Fields.AddRewardPointsStore")]
+        public IList<SelectListItem> RewardPointsAvailableStores { get; set; }
+
+
+
         //send email model
         public SendEmailModel SendEmail { get; set; }
         //send PM model
@@ -207,8 +217,13 @@ namespace Nop.Admin.Models.Customers
         [NopResourceDisplayName("Admin.Customers.Customers.AssociatedExternalAuth")]
         public IList<AssociatedExternalAuthModel> AssociatedExternalAuthRecords { get; set; }
 
-        
+
         #region Nested classes
+
+        public partial class StoreModel : BaseNopEntityModel
+        {
+            public string Name { get; set; }
+        }
 
         public partial class AssociatedExternalAuthModel : BaseNopEntityModel
         {
@@ -224,6 +239,9 @@ namespace Nop.Admin.Models.Customers
 
         public partial class RewardPointsHistoryModel : BaseNopEntityModel
         {
+            [NopResourceDisplayName("Admin.Customers.Customers.RewardPoints.Fields.Store")]
+            public string StoreName { get; set; }
+
             [NopResourceDisplayName("Admin.Customers.Customers.RewardPoints.Fields.Points")]
             public int Points { get; set; }
 
@@ -247,6 +265,13 @@ namespace Nop.Admin.Models.Customers
             [NopResourceDisplayName("Admin.Customers.Customers.SendEmail.Body")]
             [AllowHtml]
             public string Body { get; set; }
+
+            [NopResourceDisplayName("Admin.Customers.Customers.SendEmail.SendImmediately")]
+            public bool SendImmediately { get; set; }
+
+            [NopResourceDisplayName("Admin.Customers.Customers.SendEmail.DontSendBeforeDate")]
+            [UIHint("DateTimeNullable")]
+            public DateTime? DontSendBeforeDate { get; set; }
         }
 
         public partial class SendPmModel : BaseNopModel
@@ -289,6 +314,18 @@ namespace Nop.Admin.Models.Customers
             [NopResourceDisplayName("Admin.Customers.Customers.ActivityLog.Comment")]
             public string Comment { get; set; }
             [NopResourceDisplayName("Admin.Customers.Customers.ActivityLog.CreatedOn")]
+            public DateTime CreatedOn { get; set; }
+        }
+
+        public partial class BackInStockSubscriptionModel : BaseNopEntityModel
+        {
+            [NopResourceDisplayName("Admin.Customers.Customers.BackInStockSubscriptions.Store")]
+            public string StoreName { get; set; }
+            [NopResourceDisplayName("Admin.Customers.Customers.BackInStockSubscriptions.Product")]
+            public int ProductId { get; set; }
+            [NopResourceDisplayName("Admin.Customers.Customers.BackInStockSubscriptions.Product")]
+            public string ProductName { get; set; }
+            [NopResourceDisplayName("Admin.Customers.Customers.BackInStockSubscriptions.CreatedOn")]
             public DateTime CreatedOn { get; set; }
         }
 

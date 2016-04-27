@@ -1,5 +1,6 @@
 ﻿using System;
 using AutoMapper;
+using Nop.Admin.Infrastructure.Mapper;
 using Nop.Admin.Models.Blogs;
 using Nop.Admin.Models.Catalog;
 using Nop.Admin.Models.Cms;
@@ -57,12 +58,12 @@ namespace Nop.Admin.Extensions
     {
         public static TDestination MapTo<TSource, TDestination>(this TSource source)
         {
-            return Mapper.Map<TSource, TDestination>(source);
+            return AutoMapperConfiguration.Mapper.Map<TSource, TDestination>(source);
         }
 
         public static TDestination MapTo<TSource, TDestination>(this TSource source, TDestination destination)
         {
-            return Mapper.Map(source, destination);
+            return AutoMapperConfiguration.Mapper.Map(source, destination);
         }
         
         #region Category
@@ -653,6 +654,7 @@ namespace Nop.Admin.Extensions
                         }
                         break;
                     case AttributeControlType.ColorSquares:
+                    case AttributeControlType.ImageSquares:
                     case AttributeControlType.Datepicker:
                     case AttributeControlType.FileUpload:
                     default:
@@ -1092,6 +1094,44 @@ namespace Nop.Admin.Extensions
         }
 
         public static TopicTemplate ToEntity(this TopicTemplateModel model, TopicTemplate destination)
+        {
+            return model.MapTo(destination);
+        }
+
+        #endregion
+
+        #region Return request reason
+
+        public static ReturnRequestReasonModel ToModel(this ReturnRequestReason entity)
+        {
+            return entity.MapTo<ReturnRequestReason, ReturnRequestReasonModel>();
+        }
+
+        public static ReturnRequestReason ToEntity(this ReturnRequestReasonModel model)
+        {
+            return model.MapTo<ReturnRequestReasonModel, ReturnRequestReason>();
+        }
+
+        public static ReturnRequestReason ToEntity(this ReturnRequestReasonModel model, ReturnRequestReason destination)
+        {
+            return model.MapTo(destination);
+        }
+
+        #endregion
+
+        #region Return request action
+
+        public static ReturnRequestActionModel ToModel(this ReturnRequestAction entity)
+        {
+            return entity.MapTo<ReturnRequestAction, ReturnRequestActionModel>();
+        }
+
+        public static ReturnRequestAction ToEntity(this ReturnRequestActionModel model)
+        {
+            return model.MapTo<ReturnRequestActionModel, ReturnRequestAction>();
+        }
+
+        public static ReturnRequestAction ToEntity(this ReturnRequestActionModel model, ReturnRequestAction destination)
         {
             return model.MapTo(destination);
         }

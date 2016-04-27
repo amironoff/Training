@@ -134,7 +134,12 @@ namespace Nop.Core.Domain.Customers
         /// Gets or sets a value indicating whether deleted customer records should be prefixed suffixed with "-DELETED"
         /// </summary>
         public bool SuffixDeletedCustomers { get; set; }
-        
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to force entering email twice
+        /// </summary>
+        public bool EnteringEmailTwice { get; set; }
+
         #region Form fields
 
         /// <summary>
@@ -150,6 +155,10 @@ namespace Nop.Core.Domain.Customers
         /// Gets or sets a value indicating whether 'Date of Birth' is required
         /// </summary>
         public bool DateOfBirthRequired { get; set; }
+        /// <summary>
+        /// Gets or sets a minimum age. Null if ignored
+        /// </summary>
+        public int? DateOfBirthMinimumAge { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether 'Company' is enabled

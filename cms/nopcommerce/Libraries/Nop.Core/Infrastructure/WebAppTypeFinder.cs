@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Web;
 using System.Web.Hosting;
-using Nop.Core.Configuration;
 
 namespace Nop.Core.Infrastructure
 {
@@ -17,15 +16,6 @@ namespace Nop.Core.Infrastructure
 
         private bool _ensureBinFolderAssembliesLoaded = true;
         private bool _binFolderAssembliesLoaded;
-
-        #endregion
-
-        #region Ctor
-
-        public WebAppTypeFinder(NopConfig config)
-        {
-            this._ensureBinFolderAssembliesLoaded = config.DynamicDiscovery;
-        }
 
         #endregion
 

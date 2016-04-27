@@ -1,0 +1,26 @@
+﻿@model ReturnRequestReasonModel
+@{
+    //page title
+    ViewBag.Title = T("Admin.Configuration.Settings.Order.ReturnRequestReasons.AddNew").Text;
+}
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="content-header clearfix">
+        <h1 class="pull-left">
+            @T("Admin.Configuration.Settings.Order.ReturnRequestReasons.AddNew")
+            <small>@Html.ActionLink("(" + T("Admin.Configuration.Settings.Order.ReturnRequestReasons.BackToList") + ")", "ReturnRequestReasonList")</small>
+        </h1>
+        <div class="pull-right">
+            <input type="submit" name="save" class="btn btn-default" value="@T("Admin.Common.Save")" />
+            <input type="submit" name="save-continue" class="btn btn-default" value="@T("Admin.Common.SaveContinue")" />
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="form-horizontal">
+            @Html.Partial("_CreateOrUpdate.ReturnRequestReason", Model)
+        </div>
+    </div>
+}

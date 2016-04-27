@@ -213,7 +213,15 @@ namespace Nop.Admin.Controllers
                 _customerActivityService.InsertActivity("AddNewDiscount", _localizationService.GetResource("ActivityLog.AddNewDiscount"), discount.Name);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Promotions.Discounts.Added"));
-                return continueEditing ? RedirectToAction("Edit", new { id = discount.Id }) : RedirectToAction("List");
+
+                if (continueEditing)
+                {
+                    //selected tab
+                    SaveSelectedTabName();
+
+                    return RedirectToAction("Edit", new { id = discount.Id });
+                }
+                return RedirectToAction("List");
             }
 
             //If we got this far, something failed, redisplay form
@@ -259,23 +267,15 @@ namespace Nop.Admin.Controllers
                     && discount.DiscountType != DiscountType.AssignedToCategories)
                 {
                     //applied to categories
-                    var categories = discount.AppliedToCategories.ToList();
                     discount.AppliedToCategories.Clear();
                     _discountService.UpdateDiscount(discount);
-                    //update "HasDiscountsApplied" property
-                    foreach (var category in categories)
-                        _categoryService.UpdateHasDiscountsApplied(category);
                 }
                 if (prevDiscountType == DiscountType.AssignedToManufacturers
                     && discount.DiscountType != DiscountType.AssignedToManufacturers)
                 {
                     //applied to manufacturers
-                    var manufacturers = discount.AppliedToManufacturers.ToList();
                     discount.AppliedToManufacturers.Clear();
                     _discountService.UpdateDiscount(discount);
-                    //update "HasDiscountsApplied" property
-                    foreach (var manufacturer in manufacturers)
-                        _manufacturerService.UpdateHasDiscountsApplied(manufacturer);
                 }
                 if (prevDiscountType == DiscountType.AssignedToSkus
                     && discount.DiscountType != DiscountType.AssignedToSkus)
@@ -297,7 +297,7 @@ namespace Nop.Admin.Controllers
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
+                    SaveSelectedTabName();
 
                     return RedirectToAction("Edit",  new {id = discount.Id});
                 }
@@ -320,21 +320,13 @@ namespace Nop.Admin.Controllers
             if (discount == null)
                 //No discount found with the specified id
                 return RedirectToAction("List");
-
-            //applied to categories
-            var categories = discount.AppliedToCategories.ToList();
-            //applied to manufacturers
-            var manufacturers = discount.AppliedToManufacturers.ToList();
+            
             //applied to products
             var products = discount.AppliedToProducts.ToList();
 
             _discountService.DeleteDiscount(discount);
             
             //update "HasDiscountsApplied" properties
-            foreach (var category in categories)
-                _categoryService.UpdateHasDiscountsApplied(category);
-            foreach (var manufacturer in manufacturers)
-                _manufacturerService.UpdateHasDiscountsApplied(manufacturer);
             foreach (var p in products)
                 _productService.UpdateHasDiscountsApplied(p);
 
@@ -605,7 +597,6 @@ namespace Nop.Admin.Controllers
                 category.AppliedDiscounts.Remove(discount);
 
             _categoryService.UpdateCategory(category);
-            _categoryService.UpdateHasDiscountsApplied(category);
 
             return new NullJsonResult();
         }
@@ -626,7 +617,7 @@ namespace Nop.Admin.Controllers
                 return AccessDeniedView();
 
             var categories = _categoryService.GetAllCategories(model.SearchCategoryName,
-                command.Page - 1, command.PageSize, true);
+                0, command.Page - 1, command.PageSize, true);
             var gridModel = new DataSourceResult
             {
                 Data = categories.Select(x =>
@@ -663,7 +654,6 @@ namespace Nop.Admin.Controllers
                             category.AppliedDiscounts.Add(discount);
 
                         _categoryService.UpdateCategory(category);
-                        _categoryService.UpdateHasDiscountsApplied(category);
                     }
                 }
             }
@@ -723,7 +713,6 @@ namespace Nop.Admin.Controllers
                 manufacturer.AppliedDiscounts.Remove(discount);
 
             _manufacturerService.UpdateManufacturer(manufacturer);
-            _manufacturerService.UpdateHasDiscountsApplied(manufacturer);
 
             return new NullJsonResult();
         }
@@ -744,7 +733,7 @@ namespace Nop.Admin.Controllers
                 return AccessDeniedView();
 
             var manufacturers = _manufacturerService.GetAllManufacturers(model.SearchManufacturerName,
-                command.Page - 1, command.PageSize, true);
+                0, command.Page - 1, command.PageSize, true);
             var gridModel = new DataSourceResult
             {
                 Data = manufacturers.Select(x => x.ToModel()),
@@ -776,7 +765,6 @@ namespace Nop.Admin.Controllers
                             manufacturer.AppliedDiscounts.Add(discount);
 
                         _manufacturerService.UpdateManufacturer(manufacturer);
-                        _manufacturerService.UpdateHasDiscountsApplied(manufacturer);
                     }
                 }
             }

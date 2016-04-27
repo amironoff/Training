@@ -221,11 +221,11 @@ namespace Nop.Services.Directory
         /// <returns>Converted value</returns>
         public virtual decimal ConvertCurrency(decimal amount, Currency sourceCurrencyCode, Currency targetCurrencyCode)
         {
-            if (targetCurrencyCode == null)
+            if (sourceCurrencyCode == null)
                 throw new ArgumentNullException("sourceCurrencyCode");
 
             if (targetCurrencyCode == null)
-                throw new ArgumentNullException("sourceCurrencyCode");
+                throw new ArgumentNullException("targetCurrencyCode");
 
             decimal result = amount;
             if (sourceCurrencyCode.Id == targetCurrencyCode.Id)

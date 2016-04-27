@@ -470,7 +470,6 @@ label, label + * {
 	background-color: #e4444c;
 }
 .bar-notification .content {
-	float: left;
 	margin: 0 10px 0 0;
 }
 .bar-notification .content a {
@@ -954,6 +953,10 @@ label, label + * {
 .newsletter-subscribe-button:hover {
 	background-color: #248ece;
 }
+.newsletter-email .options {
+    clear: both;
+    padding: 10px 0 0;
+}
 .newsletter-validation, 
 .newsletter-result { 
 	width: 100%;
@@ -988,10 +991,10 @@ label, label + * {
 .footer-powered-by a:hover {
 	text-decoration: underline;
 }
-.footer-store-theme {
+.theme-selector {
 	margin: 10px 0 0;
 }
-.footer-store-theme select {
+.theme-selector select {
 	width: 170px;
 }
 
@@ -1248,7 +1251,6 @@ label, label + * {
 }
 .product-selectors select {
 	margin: 0 8px;
-	text-transform: lowercase;
 }
 .product-selectors .product-viewmode {
 	display: none;
@@ -1311,6 +1313,9 @@ label, label + * {
 	width: 5px;
 	height: 5px;
 	background-color: #ddd;
+}
+.product-filter .group li.color-item:before {
+	top: 25px;
 }
 
 .filtered-items .title {
@@ -1479,7 +1484,8 @@ label, label + * {
 
 .home-page-category-grid,
 .sub-category-grid,
-.manufacturer-grid {
+.manufacturer-grid,
+.vendor-grid {
 	margin: 0 0 20px;
 }
 .home-page-category-grid .title,
@@ -1532,28 +1538,16 @@ label, label + * {
 	border: 1px solid #ddd;
 }
 
-.vendor-list li {
-	display: inline-block;
-	margin: 0 25px 0 0;
-}
-.vendor-list li a {
-	display: block;
-	position: relative;
-	padding: 5px 0;
+.vendor-grid .title {
+	margin: 0 0 15px;
+	text-align: center;
 	font-size: 16px;
+}
+.vendor-grid .title a:hover {
 	color: #4ab2f1;
 }
-.vendor-list li a:before {
-	content: "";
-	position: absolute;
-	top: 13px;
-	left: -15px;
-	width: 5px;
-	height: 5px;
-	background-color: #ddd;   
-}
-.vendor-list li a:hover {
-	text-decoration: underline;
+.vendor-grid .picture {
+	border: 1px solid #ddd;
 }
 
 .pager {
@@ -1674,6 +1668,17 @@ label, label + * {
 .overview {
 	position: relative;
 	margin: 0 0 50px;
+}
+.overview .discontinued-product {
+    background: #f3f3f3;
+    margin: 0 0 20px;
+}
+.overview .discontinued-product h4 {
+    display: inline-block;
+    font-size: 14px;
+    padding: 17px 17px 17px 40px;
+    background: url('../images/discontinued-product-icon.png') no-repeat 13px center;
+    color: #de444c;
 }
 .overview .product-name {
 	margin: 0 0 25px;
@@ -1824,6 +1829,12 @@ label, label + * {
 	background: url('../images/shipping.png') left center no-repeat;
 	padding: 2px 0 2px 28px;
 	font-weight: bold;
+	color: #444;
+}
+.overview .min-qty-notification,
+.variant-overview .min-qty-notification {
+	margin: 10px 0;
+    font-style: italic;
 	color: #444;
 }
 .overview .download-sample,
@@ -2204,7 +2215,63 @@ label, label + * {
 	z-index: -1;
 	margin: -32px 0 0;
 }
-
+.tooltip-container {
+    position: absolute;
+    width:200px;
+    color: #000000;
+    background: #FFFFFF;
+    border: 1px solid #eeeeee;
+    text-align: center;
+    visibility: hidden;
+    border-radius: 5px;
+}
+.tooltip-container:before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -7px;
+    width: 0; height: 0;
+    border-bottom: 7px solid #eeeeee;
+    border-right: 7px solid transparent;
+    border-left: 7px solid transparent;
+}
+.tooltip-container:after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -6px;
+    width: 0; height: 0;
+    border-bottom: 6px solid #FFFFFF;
+    border-right: 6px solid transparent;
+    border-left: 6px solid transparent;
+}
+.color-squares li:hover .tooltip-container {
+    visibility: visible;
+    margin-left: -83px;
+    margin-top: 5px;
+    z-index: 999;
+}
+.tooltip-container .tooltip-header {
+    background-color:#F6F6F6;
+    height:25px;
+    border-top-right-radius:4px;
+    border-top-left-radius:4px;
+    padding-left:10px;
+    padding-top:5px;
+    text-align:left;
+    width: 198px;
+    font-size: 15px;
+    border-bottom: 1px #EEEEEE solid;
+}
+.tooltip-container .tooltip-body {
+    margin:5px;
+}
+.tooltip-container .tooltip-body img {
+    border: 0px #FFF;
+    width: 190px;
+}
 .giftcard {
 	margin: 0 0 20px;
 	overflow: hidden;
@@ -2593,22 +2660,26 @@ label, label + * {
 }
 
 
-/*********** CONTACT & EMAIL A FRIEND ***********/
+/*********** CONTACT & EMAIL A FRIEND & APPLY FOR VENDOR ACCOUNT ***********/
 
 
 
 .contact-page .page-title,
-.email-a-friend-page .page-title {
+.email-a-friend-page .page-title,
+.apply-vendor-page .page-title {
 	margin: 0 0 -1px;
 }
 .contact-page .result,
 .contact-page .message-error,
 .email-a-friend-page .result,
-.email-a-friend-page .message-error {
+.email-a-friend-page .message-error,
+.apply-vendor-page .result,
+.apply-vendor-page .message-error {
 	margin: 20px 0;
 }
 .contact-page .button-1,
-.email-a-friend-page .button-1 {
+.email-a-friend-page .button-1,
+.apply-vendor-page .button-1 {
 	min-width: 140px;
 	border: none;
 	background-color: #4ab2f1;
@@ -2619,11 +2690,13 @@ label, label + * {
 	text-transform: uppercase;
 }
 .contact-page .button-1:hover,
-.email-a-friend-page .button-1:hover {
+.email-a-friend-page .button-1:hover,
+.apply-vendor-page .button-1:hover {
 	background-color: #248ece;
 }
 .contact-page .topic-block,
-.email-a-friend-page .title {
+.email-a-friend-page .title,
+.apply-vendor-page .title {
 	margin: 25px 0;
 }
 .email-a-friend-page .title h2 {
@@ -2715,6 +2788,16 @@ label, label + * {
 	color: #4cb17c;
 }
 
+.customer-info-page .vat-status {
+    margin: 0 5px;
+    font-size: 14px;
+}
+.registration-page .vat-note,
+.customer-info-page .vat-note {
+    display: block;
+    font-size: 14px;
+    margin-top: 5px;
+}
 .login-page .customer-blocks {
 	margin: 0 0 30px;
 }
@@ -3031,7 +3114,22 @@ label, label + * {
 	margin: 10px 0 0;
 	text-align: left;
 }
-
+.shopping-cart-page .checkout-attributes a {
+	color: #4ab3f1;
+}
+.shopping-cart-page .checkout-attributes a:hover {
+	text-decoration: underline;
+}
+.shopping-cart-page .tax-shipping-info {
+	margin: 20px 0;
+	text-align: center;
+}
+.shopping-cart-page .tax-shipping-info a {
+	color: #4ab3f1;
+}
+.shopping-cart-page .tax-shipping-info a:hover {
+	text-decoration: underline;
+}
 .shopping-cart-page .common-buttons {
 	margin: 0 0 60px;
 	background-color: #f6f6f6;
@@ -3071,7 +3169,7 @@ label, label + * {
 }
 .checkout-attributes input[type="text"],
 .checkout-attributes select {
-	min-width: 200px;
+	min-width: 170px;
 }
 .checkout-attributes ul {
 	font-size: 0;
@@ -3083,6 +3181,11 @@ label, label + * {
 	background-color: #fff;
 	padding: 8px 10px;
 	font-size: 14px; /*reset zeroing*/
+}
+.checkout-attributes .color-squares li {
+     border: none;
+     padding: 0;
+     line-height: 0;
 }
 .checkout-attributes li label {
 	display: inline-block;
@@ -4015,6 +4118,7 @@ label, label + * {
 	max-width: 100%;
 	max-height: 100%;
 	margin: auto;
+    border: solid 2px #CEDBE1 !important;
 }
 .comment-time {
 	margin: 0 0 15px;
@@ -4181,9 +4285,6 @@ label, label + * {
 .forums-table-section .latest-post label {
 	color: #777;
 }
-.forum-group .latest-post .author {
-	display: none;
-}
 
 .forums-table-section .view-all {
 	margin: 30px 0 0;
@@ -4328,6 +4429,9 @@ label, label + * {
 	max-width: 100%;
 	max-height: 100%;
 	margin: auto;
+}
+.topic-post .avatar img {
+    border: solid 2px #CEDBE1 !important;
 }
 .topic-post .user-stats {
 	margin: 0 0 15px;
@@ -4523,8 +4627,11 @@ label, label + * {
 }
 
 .private-message-send-page a {
-	font-size: 18px;
+	font-size: 14px;
 	color: #4ab2f1;
+}
+.private-message-send-page span {
+	font-size: 14px;
 }
 
 /* jQuery tabs */
@@ -5028,9 +5135,11 @@ pre {
     height: 40px;
 }
 .item-box .product-title {
-    height: 42px;
+    min-height: 42px;
     margin: 0 0 5px;
 }
+
+
 /*** PRODUCT PAGE ***/
 
 
@@ -6047,7 +6156,7 @@ pre {
 	margin: 0;
 	line-height: 32px;
 }
-.footer-store-theme {
+.theme-selector {
 	float: left;
 	margin: 0 0 0 15px;
 }

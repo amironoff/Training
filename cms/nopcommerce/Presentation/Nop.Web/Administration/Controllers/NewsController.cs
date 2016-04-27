@@ -137,6 +137,12 @@ namespace Nop.Admin.Controllers
                 Data = news.Select(x =>
                 {
                     var m = x.ToModel();
+                    //little hack here:
+                    //ensure that descriptions are not returned
+                    //otherwise, we can get the following error if entities have too long descriptions:
+                    //"Error during serialization or deserialization using the JSON JavaScriptSerializer. The length of the string exceeds the value set on the maxJsonLength property. "
+                    //also it improves performance
+                    m.Full = "";
                     if (x.StartDateUtc.HasValue)
                         m.StartDate = _dateTimeHelper.ConvertToUserTime(x.StartDateUtc.Value, DateTimeKind.Utc);
                     if (x.EndDateUtc.HasValue)
@@ -189,7 +195,16 @@ namespace Nop.Admin.Controllers
                 SaveStoreMappings(newsItem, model);
 
                 SuccessNotification(_localizationService.GetResource("Admin.ContentManagement.News.NewsItems.Added"));
-                return continueEditing ? RedirectToAction("Edit", new { id = newsItem.Id }) : RedirectToAction("List");
+
+                if (continueEditing)
+                {
+                    //selected tab
+                    SaveSelectedTabName();
+
+                    return RedirectToAction("Edit", new { id = newsItem.Id });
+                }
+                return RedirectToAction("List");
+
             }
 
             //If we got this far, something failed, redisplay form
@@ -248,7 +263,7 @@ namespace Nop.Admin.Controllers
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
+                    SaveSelectedTabName();
 
                     return RedirectToAction("Edit", new {id = newsItem.Id});
                 }
@@ -351,7 +366,29 @@ namespace Nop.Admin.Controllers
 
             return new NullJsonResult();
         }
+        
+        [HttpPost]
+        public ActionResult DeleteSelectedComments(ICollection<int> selectedIds)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageNews))
+                return AccessDeniedView();
 
+            if (selectedIds != null)
+            {
+                var comments = _newsService.GetNewsCommentsByIds(selectedIds.ToArray());
+                var news = _newsService.GetNewsByIds(comments.Select(p => p.NewsItemId).Distinct().ToArray());
+
+                _newsService.DeleteNewsComments(comments);
+                //update totals
+                foreach (var newsItem in news)
+                {
+                    newsItem.CommentCount = newsItem.NewsComments.Count;
+                    _newsService.UpdateNews(newsItem);
+                }
+            }
+
+            return Json(new { Result = true });
+        }
 
         #endregion
     }

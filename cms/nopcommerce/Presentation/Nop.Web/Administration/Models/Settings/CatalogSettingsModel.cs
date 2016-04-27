@@ -8,8 +8,14 @@ namespace Nop.Admin.Models.Settings
     {
         public int ActiveStoreScopeConfiguration { get; set; }
 
+        
+        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.AllowViewUnpublishedProductPage")]
+        public bool AllowViewUnpublishedProductPage { get; set; }
+        public bool AllowViewUnpublishedProductPage_OverrideForStore { get; set; }
 
-
+        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.DisplayDiscontinuedMessageForUnpublishedProducts")]
+        public bool DisplayDiscontinuedMessageForUnpublishedProducts { get; set; }
+        public bool DisplayDiscontinuedMessageForUnpublishedProducts_OverrideForStore { get; set; }
 
         [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.ShowProductSku")]
         public bool ShowProductSku { get; set; }
@@ -72,6 +78,10 @@ namespace Nop.Admin.Models.Settings
         public bool NotifyStoreOwnerAboutNewProductReviews { get; set; }
         public bool NotifyStoreOwnerAboutNewProductReviews_OverrideForStore { get; set; }
 
+        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.ShowProductReviewsPerStore")]
+        public bool ShowProductReviewsPerStore { get; set; }
+        public bool ShowProductReviewsPerStore_OverrideForStore { get; set; }
+
         [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.EmailAFriendEnabled")]
         public bool EmailAFriendEnabled { get; set; }
         public bool EmailAFriendEnabled_OverrideForStore { get; set; }
@@ -88,13 +98,13 @@ namespace Nop.Admin.Models.Settings
         public bool RecentlyViewedProductsEnabled { get; set; }
         public bool RecentlyViewedProductsEnabled_OverrideForStore { get; set; }
 
-        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.RecentlyAddedProductsNumber")]
-        public int RecentlyAddedProductsNumber { get; set; }
-        public bool RecentlyAddedProductsNumber_OverrideForStore { get; set; }
+        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.NewProductsNumber")]
+        public int NewProductsNumber { get; set; }
+        public bool NewProductsNumber_OverrideForStore { get; set; }
 
-        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.RecentlyAddedProductsEnabled")]
-        public bool RecentlyAddedProductsEnabled { get; set; }
-        public bool RecentlyAddedProductsEnabled_OverrideForStore { get; set; }
+        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.NewProductsEnabled")]
+        public bool NewProductsEnabled { get; set; }
+        public bool NewProductsEnabled_OverrideForStore { get; set; }
 
         [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.CompareProductsEnabled")]
         public bool CompareProductsEnabled { get; set; }
@@ -143,15 +153,7 @@ namespace Nop.Admin.Models.Settings
         [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.ProductsAlsoPurchasedNumber")]
         public int ProductsAlsoPurchasedNumber { get; set; }
         public bool ProductsAlsoPurchasedNumber_OverrideForStore { get; set; }
-
-        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.EnableDynamicPriceUpdate")]
-        public bool EnableDynamicPriceUpdate { get; set; }
-        public bool EnableDynamicPriceUpdate_OverrideForStore { get; set; }
-
-        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.DynamicPriceUpdateAjax")]
-        public bool DynamicPriceUpdateAjax { get; set; }
-        public bool DynamicPriceUpdateAjax_OverrideForStore { get; set; }
-
+        
         [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.NumberOfProductTags")]
         public int NumberOfProductTags { get; set; }
         public bool NumberOfProductTags_OverrideForStore { get; set; }
@@ -211,6 +213,10 @@ namespace Nop.Admin.Models.Settings
         [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.DisplayTaxShippingInfoProductBoxes")]
         public bool DisplayTaxShippingInfoProductBoxes { get; set; }
         public bool DisplayTaxShippingInfoProductBoxes_OverrideForStore { get; set; }
+
+        [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.DisplayTaxShippingInfoShoppingCart")]
+        public bool DisplayTaxShippingInfoShoppingCart { get; set; }
+        public bool DisplayTaxShippingInfoShoppingCart_OverrideForStore { get; set; }
 
         [NopResourceDisplayName("Admin.Configuration.Settings.Catalog.DisplayTaxShippingInfoWishlist")]
         public bool DisplayTaxShippingInfoWishlist { get; set; }

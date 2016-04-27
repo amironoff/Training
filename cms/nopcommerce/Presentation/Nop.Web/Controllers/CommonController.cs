@@ -32,10 +32,12 @@ using Nop.Services.Seo;
 using Nop.Services.Topics;
 using Nop.Services.Vendors;
 using Nop.Web.Extensions;
+using Nop.Web.Framework;
 using Nop.Web.Framework.Localization;
 using Nop.Web.Framework.Security;
 using Nop.Web.Framework.Security.Captcha;
 using Nop.Web.Framework.Themes;
+using Nop.Web.Framework.UI;
 using Nop.Web.Infrastructure.Cache;
 using Nop.Web.Models.Catalog;
 using Nop.Web.Models.Common;
@@ -68,6 +70,7 @@ namespace Nop.Web.Controllers
         private readonly ICacheManager _cacheManager;
         private readonly ICustomerActivityService _customerActivityService;
         private readonly IVendorService _vendorService;
+        private readonly IPageHeadBuilder _pageHeadBuilder;
 
         private readonly CustomerSettings _customerSettings;
         private readonly TaxSettings _taxSettings;
@@ -93,30 +96,31 @@ namespace Nop.Web.Controllers
             ILanguageService languageService,
             ICurrencyService currencyService,
             ILocalizationService localizationService,
-            IWorkContext workContext, 
+            IWorkContext workContext,
             IStoreContext storeContext,
-            IQueuedEmailService queuedEmailService, 
+            IQueuedEmailService queuedEmailService,
             IEmailAccountService emailAccountService,
             ISitemapGenerator sitemapGenerator,
             IThemeContext themeContext,
             IThemeProvider themeProvider,
             IForumService forumService,
-            IGenericAttributeService genericAttributeService, 
+            IGenericAttributeService genericAttributeService,
             IWebHelper webHelper,
             IPermissionService permissionService,
             ICacheManager cacheManager,
             ICustomerActivityService customerActivityService,
             IVendorService vendorService,
-            CustomerSettings customerSettings, 
-            TaxSettings taxSettings, 
+            IPageHeadBuilder pageHeadBuilder,
+            CustomerSettings customerSettings,
+            TaxSettings taxSettings,
             CatalogSettings catalogSettings,
             StoreInformationSettings storeInformationSettings,
             EmailAccountSettings emailAccountSettings,
-            CommonSettings commonSettings, 
-            BlogSettings blogSettings, 
+            CommonSettings commonSettings,
+            BlogSettings blogSettings,
             NewsSettings newsSettings,
             ForumSettings forumSettings,
-            LocalizationSettings localizationSettings, 
+            LocalizationSettings localizationSettings,
             CaptchaSettings captchaSettings,
             VendorSettings vendorSettings)
         {
@@ -141,6 +145,8 @@ namespace Nop.Web.Controllers
             this._cacheManager = cacheManager;
             this._customerActivityService = customerActivityService;
             this._vendorService = vendorService;
+            this._pageHeadBuilder = pageHeadBuilder;
+
 
             this._customerSettings = customerSettings;
             this._taxSettings = taxSettings;
@@ -222,6 +228,10 @@ namespace Nop.Web.Controllers
 
             return PartialView(model);
         }
+        //available even when a store is closed
+        [StoreClosed(true)]
+        //available even when navigation is not allowed
+        [PublicStoreAllowNavigation(true)]
         public ActionResult SetLanguage(int langid, string returnUrl = "")
         {
             var language = _languageService.GetLanguageById(langid);
@@ -237,7 +247,7 @@ namespace Nop.Web.Controllers
             //prevent open redirection attack
             if (!Url.IsLocalUrl(returnUrl))
                 returnUrl = Url.RouteUrl("HomePage");
-            
+
             //language part in URL
             if (_localizationSettings.SeoFriendlyUrlsForLanguagesEnabled)
             {
@@ -292,6 +302,8 @@ namespace Nop.Web.Controllers
 
             return PartialView(model);
         }
+        //available even when navigation is not allowed
+        [PublicStoreAllowNavigation(true)]
         public ActionResult SetCurrency(int customerCurrency, string returnUrl = "")
         {
             var currency = _currencyService.GetCurrencyById(customerCurrency);
@@ -301,7 +313,7 @@ namespace Nop.Web.Controllers
             //home page
             if (String.IsNullOrEmpty(returnUrl))
                 returnUrl = Url.RouteUrl("HomePage");
-            
+
             //prevent open redirection attack
             if (!Url.IsLocalUrl(returnUrl))
                 returnUrl = Url.RouteUrl("HomePage");
@@ -323,6 +335,8 @@ namespace Nop.Web.Controllers
 
             return PartialView(model);
         }
+        //available even when navigation is not allowed
+        [PublicStoreAllowNavigation(true)]
         public ActionResult SetTaxType(int customerTaxType, string returnUrl = "")
         {
             var taxDisplayType = (TaxDisplayType)Enum.ToObject(typeof(TaxDisplayType), customerTaxType);
@@ -338,7 +352,7 @@ namespace Nop.Web.Controllers
 
             return Redirect(returnUrl);
         }
-        
+
         //footer
         [ChildActionOnly]
         public ActionResult JavaScriptDisabledWarning()
@@ -408,6 +422,7 @@ namespace Nop.Web.Controllers
                 ImpersonatedCustomerEmailUsername = customer.IsRegistered() ? (_customerSettings.UsernamesEnabled ? customer.Username : customer.Email) : "",
                 IsCustomerImpersonated = _workContext.OriginalCustomerIfImpersonated != null,
                 DisplayAdminLink = _permissionService.Authorize(StandardPermissionProvider.AccessAdminPanel),
+                EditPageUrl = _pageHeadBuilder.GetEditPageUrl()
             };
 
             return PartialView(model);
@@ -419,7 +434,9 @@ namespace Nop.Web.Controllers
         {
             //footer topics
             string topicCacheKey = string.Format(ModelCacheEventConsumer.TOPIC_FOOTER_MODEL_KEY,
-                _workContext.WorkingLanguage.Id, _storeContext.CurrentStore.Id);
+                _workContext.WorkingLanguage.Id,
+                _storeContext.CurrentStore.Id,
+                string.Join(",", _workContext.CurrentCustomer.GetCustomerRoleIds()));
             var cachedTopicModel = _cacheManager.Get(topicCacheKey, () =>
                 _topicService.GetAllTopics(_storeContext.CurrentStore.Id)
                 .Where(t => t.IncludeInFooterColumn1 || t.IncludeInFooterColumn2 || t.IncludeInFooterColumn3)
@@ -452,8 +469,10 @@ namespace Nop.Web.Controllers
                 ForumEnabled = _forumSettings.ForumsEnabled,
                 NewsEnabled = _newsSettings.Enabled,
                 RecentlyViewedProductsEnabled = _catalogSettings.RecentlyViewedProductsEnabled,
-                RecentlyAddedProductsEnabled = _catalogSettings.RecentlyAddedProductsEnabled,
+                NewProductsEnabled = _catalogSettings.NewProductsEnabled,
                 DisplayTaxShippingInfoFooter = _catalogSettings.DisplayTaxShippingInfoFooter,
+                HidePoweredByNopCommerce = _storeInformationSettings.HidePoweredByNopCommerce,
+                AllowCustomersToApplyForVendorAccount = _vendorSettings.AllowCustomersToApplyForVendorAccount,
                 Topics = cachedTopicModel
             };
 
@@ -463,6 +482,8 @@ namespace Nop.Web.Controllers
 
         //contact us page
         [NopHttpsRequirement(SslRequirement.Yes)]
+        //available even when a store is closed
+        [StoreClosed(true)]
         public ActionResult ContactUs()
         {
             var model = new ContactUsModel
@@ -475,13 +496,16 @@ namespace Nop.Web.Controllers
             return View(model);
         }
         [HttpPost, ActionName("ContactUs")]
+        [PublicAntiForgery]
         [CaptchaValidator]
+        //available even when a store is closed
+        [StoreClosed(true)]
         public ActionResult ContactUsSend(ContactUsModel model, bool captchaValid)
         {
             //validate CAPTCHA
             if (_captchaSettings.Enabled && _captchaSettings.ShowOnContactUsPage && !captchaValid)
             {
-                ModelState.AddModelError("", _localizationService.GetResource("Common.WrongCaptcha"));
+                ModelState.AddModelError("", _captchaSettings.GetWrongCaptchaMessage(_localizationService));
             }
 
             if (ModelState.IsValid)
@@ -506,8 +530,8 @@ namespace Nop.Web.Controllers
                 {
                     from = emailAccount.Email;
                     fromName = emailAccount.DisplayName;
-                    body = string.Format("<strong>From</strong>: {0} - {1}<br /><br />{2}", 
-                        Server.HtmlEncode(fullName), 
+                    body = string.Format("<strong>From</strong>: {0} - {1}<br /><br />{2}",
+                        Server.HtmlEncode(fullName),
                         Server.HtmlEncode(email), body);
                 }
                 else
@@ -529,7 +553,7 @@ namespace Nop.Web.Controllers
                     CreatedOnUtc = DateTime.UtcNow,
                     EmailAccountId = emailAccount.Id
                 });
-                
+
                 model.SuccessfullySent = true;
                 model.Result = _localizationService.GetResource("ContactUs.YourEnquiryHasBeenSent");
 
@@ -565,6 +589,7 @@ namespace Nop.Web.Controllers
             return View(model);
         }
         [HttpPost, ActionName("ContactVendor")]
+        [PublicAntiForgery]
         [CaptchaValidator]
         public ActionResult ContactVendorSend(ContactVendorModel model, bool captchaValid)
         {
@@ -578,7 +603,7 @@ namespace Nop.Web.Controllers
             //validate CAPTCHA
             if (_captchaSettings.Enabled && _captchaSettings.ShowOnContactUsPage && !captchaValid)
             {
-                ModelState.AddModelError("", _localizationService.GetResource("Common.WrongCaptcha"));
+                ModelState.AddModelError("", _captchaSettings.GetWrongCaptchaMessage(_localizationService));
             }
 
             model.VendorName = vendor.GetLocalized(x => x.Name);
@@ -648,7 +673,7 @@ namespace Nop.Web.Controllers
             if (!_commonSettings.SitemapEnabled)
                 return RedirectToRoute("HomePage");
 
-            string cacheKey = string.Format(ModelCacheEventConsumer.SITEMAP_PAGE_MODEL_KEY, 
+            string cacheKey = string.Format(ModelCacheEventConsumer.SITEMAP_PAGE_MODEL_KEY,
                 _workContext.WorkingLanguage.Id,
                 string.Join(",", _workContext.CurrentCustomer.GetCustomerRoleIds()),
                 _storeContext.CurrentStore.Id);
@@ -663,13 +688,13 @@ namespace Nop.Web.Controllers
                 //categories
                 if (_commonSettings.SitemapIncludeCategories)
                 {
-                    var categories = _categoryService.GetAllCategories();
+                    var categories = _categoryService.GetAllCategories(storeId: _storeContext.CurrentStore.Id);
                     model.Categories = categories.Select(x => x.ToModel()).ToList();
                 }
                 //manufacturers
                 if (_commonSettings.SitemapIncludeManufacturers)
                 {
-                    var manufacturers = _manufacturerService.GetAllManufacturers();
+                    var manufacturers = _manufacturerService.GetAllManufacturers(storeId: _storeContext.CurrentStore.Id);
                     model.Manufacturers = manufacturers.Select(x => x.ToModel()).ToList();
                 }
                 //products
@@ -710,12 +735,14 @@ namespace Nop.Web.Controllers
 
         //SEO sitemap page
         [NopHttpsRequirement(SslRequirement.No)]
+        //available even when a store is closed
+        [StoreClosed(true)]
         public ActionResult SitemapXml()
         {
             if (!_commonSettings.SitemapEnabled)
                 return RedirectToRoute("HomePage");
 
-            string cacheKey = string.Format(ModelCacheEventConsumer.SITEMAP_SEO_MODEL_KEY, 
+            string cacheKey = string.Format(ModelCacheEventConsumer.SITEMAP_SEO_MODEL_KEY,
                 _workContext.WorkingLanguage.Id,
                 string.Join(",", _workContext.CurrentCustomer.GetCustomerRoleIds()),
                 _storeContext.CurrentStore.Id);
@@ -749,7 +776,7 @@ namespace Nop.Web.Controllers
         public ActionResult SetStoreTheme(string themeName, string returnUrl = "")
         {
             _themeContext.WorkingThemeName = themeName;
-            
+
             //home page
             if (String.IsNullOrEmpty(returnUrl))
                 returnUrl = Url.RouteUrl("HomePage");
@@ -785,7 +812,7 @@ namespace Nop.Web.Controllers
             };
             return PartialView(model);
         }
-        
+
         //EU Cookie law
         [ChildActionOnly]
         public ActionResult EuCookieLaw()
@@ -798,13 +825,22 @@ namespace Nop.Web.Controllers
             if (_workContext.CurrentCustomer.IsSearchEngineAccount())
                 return Content("");
 
-            if (_workContext.CurrentCustomer.GetAttribute<bool>("EuCookieLaw.Accepted", _storeContext.CurrentStore.Id))
+            if (_workContext.CurrentCustomer.GetAttribute<bool>(SystemCustomerAttributeNames.EuCookieLawAccepted, _storeContext.CurrentStore.Id))
                 //already accepted
+                return Content("");
+
+            //ignore notification?
+            //right now it's used during logout so popup window is not displayed twice
+            if (TempData["nop.IgnoreEuCookieLawWarning"] != null && Convert.ToBoolean(TempData["nop.IgnoreEuCookieLawWarning"]))
                 return Content("");
 
             return PartialView();
         }
         [HttpPost]
+        //available even when a store is closed
+        [StoreClosed(true)]
+        //available even when navigation is not allowed
+        [PublicStoreAllowNavigation(true)]
         public ActionResult EuCookieLawAccept()
         {
             if (!_storeInformationSettings.DisplayEuCookieLawWarning)
@@ -812,128 +848,156 @@ namespace Nop.Web.Controllers
                 return Json(new { stored = false });
 
             //save setting
-            _genericAttributeService.SaveAttribute(_workContext.CurrentCustomer, "EuCookieLaw.Accepted", true, _storeContext.CurrentStore.Id);
+            _genericAttributeService.SaveAttribute(_workContext.CurrentCustomer, SystemCustomerAttributeNames.EuCookieLawAccepted, true, _storeContext.CurrentStore.Id);
             return Json(new { stored = true });
         }
 
         //robots.txt file
+        //available even when a store is closed
+        [StoreClosed(true)]
+        //available even when navigation is not allowed
+        [PublicStoreAllowNavigation(true)]
         public ActionResult RobotsTextFile()
         {
-            var disallowPaths = new List<string>
-                                    {
-                                        "/bin/",
-                                        "/content/files/",
-                                        "/content/files/exportimport/",
-                                        "/country/getstatesbycountryid",
-                                        "/install",
-                                        "/setproductreviewhelpfulness",
-                                    };
-            var localizableDisallowPaths = new List<string>
-                                               {
-                                                   "/addproducttocart/catalog/",
-                                                   "/addproducttocart/details/",
-                                                   "/backinstocksubscriptions/manage",
-                                                   "/boards/forumsubscriptions",
-                                                   "/boards/forumwatch",
-                                                   "/boards/postedit",
-                                                   "/boards/postdelete",
-                                                   "/boards/postcreate",
-                                                   "/boards/topicedit",
-                                                   "/boards/topicdelete",
-                                                   "/boards/topiccreate",
-                                                   "/boards/topicmove",
-                                                   "/boards/topicwatch",
-                                                   "/cart",
-                                                   "/checkout",
-                                                   "/checkout/billingaddress",
-                                                   "/checkout/completed",
-                                                   "/checkout/confirm",
-                                                   "/checkout/shippingaddress",
-                                                   "/checkout/shippingmethod",
-                                                   "/checkout/paymentinfo",
-                                                   "/checkout/paymentmethod",
-                                                   "/clearcomparelist",
-                                                   "/compareproducts",
-                                                   "/compareproducts/add/*",
-                                                   "/customer/avatar",
-                                                   "/customer/activation",
-                                                   "/customer/addresses",
-                                                   "/customer/changepassword",
-                                                   "/customer/checkusernameavailability",
-                                                   "/customer/downloadableproducts",
-                                                   "/customer/info",
-                                                   "/deletepm",
-                                                   "/emailwishlist",
-                                                   "/inboxupdate",
-                                                   "/newsletter/subscriptionactivation",
-                                                   "/onepagecheckout",
-                                                   "/order/history",
-                                                   "/orderdetails",
-                                                   "/passwordrecovery/confirm",
-                                                   "/poll/vote",
-                                                   "/privatemessages",
-                                                   "/returnrequest",
-                                                   "/returnrequest/history",
-                                                   "/rewardpoints/history",
-                                                   "/sendpm",
-                                                   "/sentupdate",
-                                                   "/shoppingcart/*",
-                                                   "/subscribenewsletter",
-                                                   "/topic/authenticate",
-                                                   "/viewpm",
-                                                   "/uploadfileproductattribute",
-                                                   "/uploadfilecheckoutattribute",
-                                                   "/wishlist",
-                                               };
-
-
-            const string newLine = "\r\n"; //Environment.NewLine
             var sb = new StringBuilder();
-            sb.Append("User-agent: *");
-            sb.Append(newLine);
-            //sitemaps
-            if (_localizationSettings.SeoFriendlyUrlsForLanguagesEnabled)
+
+            //if robots.custom.txt exists, let's use it instead of hard-coded data below
+            string robotsFilePath = System.IO.Path.Combine(CommonHelper.MapPath("~/"), "robots.custom.txt");
+            if (System.IO.File.Exists(robotsFilePath))
             {
-                //URLs are localizable. Append SEO code
-                foreach (var language in _languageService.GetAllLanguages(storeId: _storeContext.CurrentStore.Id))
-                {
-                    sb.AppendFormat("Sitemap: {0}{1}/sitemap.xml", _storeContext.CurrentStore.Url, language.UniqueSeoCode);
-                    sb.Append(newLine);
-                }
+                //the robots.txt file exists
+                string robotsFileContent = System.IO.File.ReadAllText(robotsFilePath);
+                sb.Append(robotsFileContent);
             }
             else
             {
-                //localizable paths (without SEO code)
-                sb.AppendFormat("Sitemap: {0}sitemap.xml", _storeContext.CurrentStore.Url);
-                sb.Append(newLine);
-            }
+                //doesn't exist. Let's generate it (default behavior)
 
-            //usual paths
-            foreach (var path in disallowPaths)
-            {
-                sb.AppendFormat("Disallow: {0}", path);
-                sb.Append(newLine);
-            }
-            //localizable paths (without SEO code)
-            foreach (var path in localizableDisallowPaths)
-            {
-                sb.AppendFormat("Disallow: {0}", path);
-                sb.Append(newLine);
-            }
-            if (_localizationSettings.SeoFriendlyUrlsForLanguagesEnabled)
-            {
-                //URLs are localizable. Append SEO code
-                foreach (var language in _languageService.GetAllLanguages(storeId: _storeContext.CurrentStore.Id))
+                var disallowPaths = new List<string>
                 {
-                    foreach (var path in localizableDisallowPaths)
+                    "/bin/",
+                    "/content/files/",
+                    "/content/files/exportimport/",
+                    "/country/getstatesbycountryid",
+                    "/install",
+                    "/setproductreviewhelpfulness",
+                };
+                var localizableDisallowPaths = new List<string>
+                {
+                    "/addproducttocart/catalog/",
+                    "/addproducttocart/details/",
+                    "/backinstocksubscriptions/manage",
+                    "/boards/forumsubscriptions",
+                    "/boards/forumwatch",
+                    "/boards/postedit",
+                    "/boards/postdelete",
+                    "/boards/postcreate",
+                    "/boards/topicedit",
+                    "/boards/topicdelete",
+                    "/boards/topiccreate",
+                    "/boards/topicmove",
+                    "/boards/topicwatch",
+                    "/cart",
+                    "/checkout",
+                    "/checkout/billingaddress",
+                    "/checkout/completed",
+                    "/checkout/confirm",
+                    "/checkout/shippingaddress",
+                    "/checkout/shippingmethod",
+                    "/checkout/paymentinfo",
+                    "/checkout/paymentmethod",
+                    "/clearcomparelist",
+                    "/compareproducts",
+                    "/compareproducts/add/*",
+                    "/customer/avatar",
+                    "/customer/activation",
+                    "/customer/addresses",
+                    "/customer/changepassword",
+                    "/customer/checkusernameavailability",
+                    "/customer/downloadableproducts",
+                    "/customer/info",
+                    "/deletepm",
+                    "/emailwishlist",
+                    "/inboxupdate",
+                    "/newsletter/subscriptionactivation",
+                    "/onepagecheckout",
+                    "/order/history",
+                    "/orderdetails",
+                    "/passwordrecovery/confirm",
+                    "/poll/vote",
+                    "/privatemessages",
+                    "/returnrequest",
+                    "/returnrequest/history",
+                    "/rewardpoints/history",
+                    "/sendpm",
+                    "/sentupdate",
+                    "/shoppingcart/*",
+                    "/storeclosed",
+                    "/subscribenewsletter",
+                    "/topic/authenticate",
+                    "/viewpm",
+                    "/uploadfileproductattribute",
+                    "/uploadfilecheckoutattribute",
+                    "/wishlist",
+                };
+
+
+                const string newLine = "\r\n"; //Environment.NewLine
+                sb.Append("User-agent: *");
+                sb.Append(newLine);
+                //sitemaps
+                if (_localizationSettings.SeoFriendlyUrlsForLanguagesEnabled)
+                {
+                    //URLs are localizable. Append SEO code
+                    foreach (var language in _languageService.GetAllLanguages(storeId: _storeContext.CurrentStore.Id))
                     {
-                        sb.AppendFormat("Disallow: {0}{1}", language.UniqueSeoCode, path);
+                        sb.AppendFormat("Sitemap: {0}{1}/sitemap.xml", _storeContext.CurrentStore.Url, language.UniqueSeoCode);
                         sb.Append(newLine);
                     }
                 }
+                else
+                {
+                    //localizable paths (without SEO code)
+                    sb.AppendFormat("Sitemap: {0}sitemap.xml", _storeContext.CurrentStore.Url);
+                    sb.Append(newLine);
+                }
+
+                //usual paths
+                foreach (var path in disallowPaths)
+                {
+                    sb.AppendFormat("Disallow: {0}", path);
+                    sb.Append(newLine);
+                }
+                //localizable paths (without SEO code)
+                foreach (var path in localizableDisallowPaths)
+                {
+                    sb.AppendFormat("Disallow: {0}", path);
+                    sb.Append(newLine);
+                }
+                if (_localizationSettings.SeoFriendlyUrlsForLanguagesEnabled)
+                {
+                    //URLs are localizable. Append SEO code
+                    foreach (var language in _languageService.GetAllLanguages(storeId: _storeContext.CurrentStore.Id))
+                    {
+                        foreach (var path in localizableDisallowPaths)
+                        {
+                            sb.AppendFormat("Disallow: {0}{1}", language.UniqueSeoCode, path);
+                            sb.Append(newLine);
+                        }
+                    }
+                }
+
+                //load and add robots.txt additions to the end of file.
+                string robotsAdditionsFile = System.IO.Path.Combine(CommonHelper.MapPath("~/"), "robots.additions.txt");
+                if (System.IO.File.Exists(robotsAdditionsFile))
+                {
+                    string robotsFileContent = System.IO.File.ReadAllText(robotsAdditionsFile);
+                    sb.Append(robotsFileContent);
+                }
             }
 
-            Response.ContentType = "text/plain";
+
+            Response.ContentType = MimeTypes.TextPlain;
             Response.Write(sb.ToString());
             return null;
         }
@@ -945,6 +1009,8 @@ namespace Nop.Web.Controllers
         }
 
         //store is closed
+        //available even when a store is closed
+        [StoreClosed(true)]
         public ActionResult StoreClosed()
         {
             return View();

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
@@ -104,13 +105,6 @@ namespace Nop.Plugin.Shipping.AustraliaPost
 
             var request = WebRequest.Create(sb.ToString()) as HttpWebRequest;
             request.Method = "GET";
-            //request.ContentType = "application/x-www-form-urlencoded";
-            //byte[] reqContent = Encoding.ASCII.GetBytes(sb.ToString());
-            //request.ContentLength = reqContent.Length;
-            //using (Stream newStream = request.GetRequestStream())
-            //{
-            //    newStream.Write(reqContent, 0, reqContent.Length);
-            //}
 
             WebResponse response = request.GetResponse();
             string rspContent;
@@ -147,7 +141,10 @@ namespace Nop.Plugin.Shipping.AustraliaPost
             if (serviceName != null && !serviceName.StartsWith("Australia Post.", StringComparison.InvariantCultureIgnoreCase))
                 serviceName = string.Format("Australia Post. {0}", serviceName);
             shippingOption.Name = serviceName;
-            shippingOption.Description = String.Format("{0} Days", rspParams["days"]);
+            if (!_australiaPostSettings.HideDeliveryInformation)
+            {
+                shippingOption.Description = String.Format("{0} Days", rspParams["days"]);
+            }
             shippingOption.Rate = Decimal.Parse(rspParams["charge"]);
 
             return shippingOption;
@@ -274,41 +271,59 @@ namespace Nop.Plugin.Shipping.AustraliaPost
                 height = MAX_LENGTH / 4;
                 width = MAX_LENGTH / 4;
             }
-            try
-            {
                 var country = getShippingOptionRequest.ShippingAddress.Country;
                 if (country == null)
                 {
                     response.AddError("Shipping country is not specified");
                     return response;
                 }
+                var serviceTypes = new List<string>();
                 switch (country.ThreeLetterIsoCode)
                 {
                     case "AUS":
                         //domestic services
-                        response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, zipPostalCodeTo, country.TwoLetterIsoCode, "Standard", weight, length, width, height, totalPackages));
-                        response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, zipPostalCodeTo, country.TwoLetterIsoCode, "Express", weight, length, width, height, totalPackages));
+                        serviceTypes.Add("Standard");
+                        serviceTypes.Add("Express");
                         //discontinued
-                        //response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, zipPostalCodeTo, country.TwoLetterIsoCode, "EXP_PLT", weight, length, width, height, totalPackages));
+                        serviceTypes.Add("EXP_PLT");
                         break;
                     default:
                         //international services
-                        response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, zipPostalCodeTo, country.TwoLetterIsoCode, "Air", weight, length, width, height, totalPackages));
-                        response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, zipPostalCodeTo, country.TwoLetterIsoCode, "Sea", weight, length, width, height, totalPackages));
-                        response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, zipPostalCodeTo, country.TwoLetterIsoCode, "ECI_D", weight, length, width, height, totalPackages));
-                        response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, zipPostalCodeTo, country.TwoLetterIsoCode, "ECI_M", weight, length, width, height, totalPackages));
-                        response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, zipPostalCodeTo, country.TwoLetterIsoCode, "EPI", weight, length, width, height, totalPackages));
+                        serviceTypes.Add("Air");
+                        serviceTypes.Add("Sea");
+                        serviceTypes.Add("ECI_D");
+                        serviceTypes.Add("ECI_M");
+                        serviceTypes.Add("EPI");
                         break;
                 }
-
-                foreach (var shippingOption in response.ShippingOptions)
+            foreach (var serviceType in serviceTypes)
+            {
+                try
                 {
-                    shippingOption.Rate += _australiaPostSettings.AdditionalHandlingCharge;
+                    response.ShippingOptions.Add(RequestShippingOption(zipPostalCodeFrom, 
+                        zipPostalCodeTo,
+                        country.TwoLetterIsoCode,
+                        serviceType,
+                        weight, 
+                        length, 
+                        width, 
+                        height, 
+                        totalPackages));
+                }
+                catch
+                {
+                    //If this plugin doesn't allow some method (e.g. sea freight) to the selected country (e.g. New Zealand),
+                    //the AusPost API returns an err_msg.
+                    //This throws an exception which results in no shipping options being offered at all.
+                    //The result is that customers from NZ can't buy anything.
+                    //That why we commented the code below (do not exit)
+                    //and process each "RequestShippingOption" separately (in try-catch)
+                    //response.AddError(ex.Message);
                 }
             }
-            catch (Exception ex)
+            foreach (var shippingOption in response.ShippingOptions)
             {
-                response.AddError(ex.Message);
+                shippingOption.Rate += _australiaPostSettings.AdditionalHandlingCharge;
             }
             return response;
         }
@@ -345,14 +360,18 @@ namespace Nop.Plugin.Shipping.AustraliaPost
             var settings = new AustraliaPostSettings
             {
                 GatewayUrl = "http://drc.edeliver.com.au/ratecalc.asp",
+                AdditionalHandlingCharge = 0,
+                HideDeliveryInformation = false
             };
             _settingService.SaveSetting(settings);
 
             //locales
             this.AddOrUpdatePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.GatewayUrl", "Gateway URL");
             this.AddOrUpdatePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.GatewayUrl.Hint", "Specify gateway URL");
-            this.AddOrUpdatePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.AdditionalHandlingCharge", "Additional handling charge.");
+            this.AddOrUpdatePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.AdditionalHandlingCharge", "Additional handling charge");
             this.AddOrUpdatePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.AdditionalHandlingCharge.Hint", "Enter additional handling fee to charge your customers.");
+            this.AddOrUpdatePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.HideDeliveryInformation", "Hide delivery information");
+            this.AddOrUpdatePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.HideDeliveryInformation.Hint", "Check to hide delivery information as description of returned shipping methods.");
             
             base.Install();
         }
@@ -367,6 +386,8 @@ namespace Nop.Plugin.Shipping.AustraliaPost
             this.DeletePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.GatewayUrl.Hint");
             this.DeletePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.AdditionalHandlingCharge");
             this.DeletePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.AdditionalHandlingCharge.Hint");
+            this.DeletePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.HideDeliveryInformation");
+            this.DeletePluginLocaleResource("Plugins.Shipping.AustraliaPost.Fields.HideDeliveryInformation.Hint");
             
             base.Uninstall();
         }

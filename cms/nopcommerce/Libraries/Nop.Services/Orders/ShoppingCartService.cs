@@ -11,6 +11,7 @@ using Nop.Services.Common;
 using Nop.Services.Customers;
 using Nop.Services.Directory;
 using Nop.Services.Events;
+using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Security;
 using Nop.Services.Stores;
@@ -42,6 +43,7 @@ namespace Nop.Services.Orders
         private readonly IStoreMappingService _storeMappingService;
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly IProductAttributeService _productAttributeService;
+        private readonly IDateTimeHelper _dateTimeHelper;
 
         #endregion
 
@@ -68,10 +70,13 @@ namespace Nop.Services.Orders
         /// <param name="storeMappingService">Store mapping service</param>
         /// <param name="genericAttributeService">Generic attribute service</param>
         /// <param name="productAttributeService">Product attribute service</param>
+        /// <param name="dateTimeHelper">Datetime helper</param>
         public ShoppingCartService(IRepository<ShoppingCartItem> sciRepository,
-            IWorkContext workContext, IStoreContext storeContext,
+            IWorkContext workContext, 
+            IStoreContext storeContext,
             ICurrencyService currencyService,
-            IProductService productService, ILocalizationService localizationService,
+            IProductService productService,
+            ILocalizationService localizationService,
             IProductAttributeParser productAttributeParser,
             ICheckoutAttributeService checkoutAttributeService,
             ICheckoutAttributeParser checkoutAttributeParser,
@@ -83,7 +88,8 @@ namespace Nop.Services.Orders
             IAclService aclService,
             IStoreMappingService storeMappingService,
             IGenericAttributeService genericAttributeService,
-            IProductAttributeService productAttributeService)
+            IProductAttributeService productAttributeService,
+            IDateTimeHelper dateTimeHelper)
         {
             this._sciRepository = sciRepository;
             this._workContext = workContext;
@@ -103,6 +109,7 @@ namespace Nop.Services.Orders
             this._storeMappingService = storeMappingService;
             this._genericAttributeService = genericAttributeService;
             this._productAttributeService = productAttributeService;
+            this._dateTimeHelper = dateTimeHelper;
         }
 
         #endregion
@@ -499,6 +506,12 @@ namespace Nop.Services.Orders
             {
                 attributes2 = attributes2.Where(x => !x.IsNonCombinable()).ToList();
             }
+            //validate conditional attributes only (if specified)
+            attributes2 = attributes2.Where(x =>
+            {
+                var conditionMet = _productAttributeParser.IsConditionMet(x, attributesXml);
+                return !conditionMet.HasValue || conditionMet.Value;
+            }).ToList();
             foreach (var a2 in attributes2)
             {
                 if (a2.IsRequired)
@@ -716,7 +729,24 @@ namespace Nop.Services.Orders
                 warnings.Add(_localizationService.GetResource("ShoppingCart.Rental.StartDateLessEndDate"));
                 return warnings;
             }
-            //compare with current time?
+
+            //allowed start date should be the future date
+            //we should compare rental start date with a store local time
+            //but we what if a store works in distinct timezones? how we should handle it? skip it for now
+            //we also ignore hours (anyway not supported yet)
+            //today
+            DateTime nowDtInStoreTimeZone = _dateTimeHelper.ConvertToUserTime(DateTime.Now, TimeZoneInfo.Local, _dateTimeHelper.DefaultStoreTimeZone);
+            var todayDt = new DateTime(nowDtInStoreTimeZone.Year, nowDtInStoreTimeZone.Month, nowDtInStoreTimeZone.Day);
+            DateTime todayDtUtc = _dateTimeHelper.ConvertToUtcTime(todayDt, _dateTimeHelper.DefaultStoreTimeZone);
+            //dates are entered in store timezone (e.g. like in hotels)
+            DateTime startDateUtc = _dateTimeHelper.ConvertToUtcTime(rentalStartDate.Value, _dateTimeHelper.DefaultStoreTimeZone);
+            //but we what if dates should be entered in a customer timezone?
+            //DateTime startDateUtc = _dateTimeHelper.ConvertToUtcTime(rentalStartDate.Value, _dateTimeHelper.CurrentTimeZone);
+            if (todayDtUtc.CompareTo(startDateUtc) > 0)
+            {
+                warnings.Add(_localizationService.GetResource("ShoppingCart.Rental.StartDateShouldBeFuture"));
+                return warnings;
+            }
 
             return warnings;
         }
@@ -972,6 +1002,7 @@ namespace Nop.Services.Orders
                     //price is the same (for products which require customers to enter a price)
                     bool customerEnteredPricesEqual = true;
                     if (sci.Product.CustomerEntersPrice)
+                        //TODO should we use RoundingHelper.RoundPrice here?
                         customerEnteredPricesEqual = Math.Round(sci.CustomerEnteredPrice, 2) == Math.Round(customerEnteredPrice, 2);
 
                     //rental products

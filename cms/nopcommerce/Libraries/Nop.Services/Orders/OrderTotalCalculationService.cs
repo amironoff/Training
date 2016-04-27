@@ -35,6 +35,7 @@ namespace Nop.Services.Orders
         private readonly IDiscountService _discountService;
         private readonly IGiftCardService _giftCardService;
         private readonly IGenericAttributeService _genericAttributeService;
+        private readonly IRewardPointService _rewardPointService;
         private readonly TaxSettings _taxSettings;
         private readonly RewardPointsSettings _rewardPointsSettings;
         private readonly ShippingSettings _shippingSettings;
@@ -57,6 +58,7 @@ namespace Nop.Services.Orders
         /// <param name="discountService">Discount service</param>
         /// <param name="giftCardService">Gift card service</param>
         /// <param name="genericAttributeService">Generic attribute service</param>
+        /// <param name="rewardPointService">Reward point service</param>
         /// <param name="taxSettings">Tax settings</param>
         /// <param name="rewardPointsSettings">Reward points settings</param>
         /// <param name="shippingSettings">Shipping settings</param>
@@ -72,6 +74,7 @@ namespace Nop.Services.Orders
             IDiscountService discountService,
             IGiftCardService giftCardService,
             IGenericAttributeService genericAttributeService,
+            IRewardPointService rewardPointService,
             TaxSettings taxSettings,
             RewardPointsSettings rewardPointsSettings,
             ShippingSettings shippingSettings,
@@ -88,6 +91,7 @@ namespace Nop.Services.Orders
             this._discountService = discountService;
             this._giftCardService = giftCardService;
             this._genericAttributeService = genericAttributeService;
+            this._rewardPointService = rewardPointService;
             this._taxSettings = taxSettings;
             this._rewardPointsSettings = rewardPointsSettings;
             this._shippingSettings = shippingSettings;
@@ -118,7 +122,7 @@ namespace Nop.Services.Orders
             var allowedDiscounts = new List<Discount>();
             if (allDiscounts != null)
                 foreach (var discount in allDiscounts)
-                    if (_discountService.IsDiscountValid(discount, customer) &&
+                    if (_discountService.ValidateDiscount(discount, customer).IsValid &&
                                discount.DiscountType == DiscountType.AssignedToOrderSubTotal &&
                                !allowedDiscounts.ContainsDiscount(discount))
                         allowedDiscounts.Add(discount);
@@ -151,7 +155,7 @@ namespace Nop.Services.Orders
             var allowedDiscounts = new List<Discount>();
             if (allDiscounts != null)
                 foreach (var discount in allDiscounts)
-                    if (_discountService.IsDiscountValid(discount, customer) &&
+                    if (_discountService.ValidateDiscount(discount, customer).IsValid &&
                                discount.DiscountType == DiscountType.AssignedToShipping &&
                                !allowedDiscounts.ContainsDiscount(discount))
                         allowedDiscounts.Add(discount);
@@ -189,7 +193,7 @@ namespace Nop.Services.Orders
             var allowedDiscounts = new List<Discount>();
             if (allDiscounts != null)
                 foreach (var discount in allDiscounts)
-                    if (_discountService.IsDiscountValid(discount, customer) &&
+                    if (_discountService.ValidateDiscount(discount, customer).IsValid &&
                                discount.DiscountType == DiscountType.AssignedToOrderTotal &&
                                !allowedDiscounts.ContainsDiscount(discount))
                         allowedDiscounts.Add(discount);
@@ -321,10 +325,7 @@ namespace Nop.Services.Orders
             }
 
             //subtotal without discount
-            if (includingTax)
-                subTotalWithoutDiscount = subTotalInclTaxWithoutDiscount;
-            else
-                subTotalWithoutDiscount = subTotalExclTaxWithoutDiscount;
+            subTotalWithoutDiscount = includingTax ? subTotalInclTaxWithoutDiscount : subTotalExclTaxWithoutDiscount;
             if (subTotalWithoutDiscount < decimal.Zero)
                 subTotalWithoutDiscount = decimal.Zero;
 
@@ -570,17 +571,12 @@ namespace Nop.Services.Orders
 
                 var pickUpInStore = _shippingSettings.AllowPickUpInStore && 
                     customer.GetAttribute<bool>(SystemCustomerAttributeNames.SelectedPickUpInStore, _storeContext.CurrentStore.Id);
-                if (pickUpInStore)
-                {
+                shippingTotal =  pickUpInStore ?
                     //"pick up in store" fee
                     //we do not adjust shipping rate ("AdjustShippingRate" method) for pickup in store
-                    shippingTotal = _shippingSettings.PickUpInStoreFee;
-                }
-                else
-                {
+                    _shippingSettings.PickUpInStoreFee :
                     //adjust shipping rate
-                    shippingTotal = AdjustShippingRate(shippingOption.Rate, cart, out appliedDiscount);
-                }
+                    AdjustShippingRate(shippingOption.Rate, cart, out appliedDiscount);
             }
             else
             {
@@ -922,11 +918,9 @@ namespace Nop.Services.Orders
                         if (resultTemp > decimal.Zero)
                         {
                             decimal remainingAmount = gc.GetGiftCardRemainingAmount();
-                            decimal amountCanBeUsed = decimal.Zero;
-                            if (resultTemp > remainingAmount)
-                                amountCanBeUsed = remainingAmount;
-                            else
-                                amountCanBeUsed = resultTemp;
+                            decimal amountCanBeUsed = resultTemp > remainingAmount ? 
+                                remainingAmount : 
+                                resultTemp;
 
                             //reduce subtotal
                             resultTemp -= amountCanBeUsed;
@@ -960,7 +954,7 @@ namespace Nop.Services.Orders
                 customer.GetAttribute<bool>(SystemCustomerAttributeNames.UseRewardPointsDuringCheckout,
                     _genericAttributeService, _storeContext.CurrentStore.Id))
             {
-                int rewardPointsBalance = customer.GetRewardPointsBalance();
+                int rewardPointsBalance = _rewardPointService.GetRewardPointsBalance(customer.Id, _storeContext.CurrentStore.Id);
                 if (CheckMinimumRewardPointsToUseRequirement(rewardPointsBalance))
                 {
                     decimal rewardPointsBalanceAmount = ConvertRewardPointsToAmount(rewardPointsBalance);

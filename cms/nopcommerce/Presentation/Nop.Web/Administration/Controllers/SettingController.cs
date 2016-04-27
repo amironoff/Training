@@ -11,6 +11,7 @@ using Nop.Core.Domain;
 using Nop.Core.Domain.Blogs;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
+using Nop.Core.Domain.Configuration;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Forums;
@@ -70,10 +71,13 @@ namespace Nop.Admin.Controllers
         private readonly IStoreService _storeService;
         private readonly IWorkContext _workContext;
         private readonly IGenericAttributeService _genericAttributeService;
+        private readonly IReturnRequestService _returnRequestService;
+        private readonly ILanguageService _languageService;
+        private readonly ILocalizedEntityService _localizedEntityService;
 
-		#endregion
+        #endregion
 
-		#region Constructors
+        #region Constructors
 
         public SettingController(ISettingService settingService,
             ICountryService countryService, 
@@ -94,7 +98,10 @@ namespace Nop.Admin.Controllers
             IMaintenanceService maintenanceService,
             IStoreService storeService,
             IWorkContext workContext, 
-            IGenericAttributeService genericAttributeService)
+            IGenericAttributeService genericAttributeService,
+            IReturnRequestService returnRequestService,
+            ILanguageService languageService,
+            ILocalizedEntityService localizedEntityService)
         {
             this._settingService = settingService;
             this._countryService = countryService;
@@ -116,12 +123,43 @@ namespace Nop.Admin.Controllers
             this._storeService = storeService;
             this._workContext = workContext;
             this._genericAttributeService = genericAttributeService;
+            this._returnRequestService = returnRequestService;
+            this._languageService = languageService;
+            this._localizedEntityService = localizedEntityService;
         }
 
-		#endregion 
-        
+        #endregion
+
+        #region Utilities
+
+        [NonAction]
+        protected virtual void UpdateLocales(ReturnRequestReason rrr, ReturnRequestReasonModel model)
+        {
+            foreach (var localized in model.Locales)
+            {
+                _localizedEntityService.SaveLocalizedValue(rrr,
+                                                               x => x.Name,
+                                                               localized.Name,
+                                                               localized.LanguageId);
+            }
+        }
+
+        [NonAction]
+        protected virtual void UpdateLocales(ReturnRequestAction rra, ReturnRequestActionModel model)
+        {
+            foreach (var localized in model.Locales)
+            {
+                _localizedEntityService.SaveLocalizedValue(rra,
+                                                               x => x.Name,
+                                                               localized.Name,
+                                                               localized.LanguageId);
+            }
+        }
+
+        #endregion
+
         #region Methods
-        
+
         [ChildActionOnly]
         public ActionResult StoreScopeConfiguration()
         {
@@ -254,6 +292,9 @@ namespace Nop.Admin.Controllers
                 model.VendorsBlockItemsToDisplay_OverrideForStore = _settingService.SettingExists(vendorSettings, x => x.VendorsBlockItemsToDisplay, storeScope);
                 model.ShowVendorOnProductDetailsPage_OverrideForStore = _settingService.SettingExists(vendorSettings, x => x.ShowVendorOnProductDetailsPage, storeScope);
                 model.AllowCustomersToContactVendors_OverrideForStore = _settingService.SettingExists(vendorSettings, x => x.AllowCustomersToContactVendors, storeScope);
+                model.AllowCustomersToApplyForVendorAccount_OverrideForStore = _settingService.SettingExists(vendorSettings, x => x.AllowCustomersToApplyForVendorAccount, storeScope);
+                model.AllowSearchByVendor_OverrideForStore = _settingService.SettingExists(vendorSettings, x => x.AllowSearchByVendor, storeScope);
+                model.MaximumProductNumber_OverrideForStore = _settingService.SettingExists(vendorSettings, x => x.MaximumProductNumber, storeScope);
             }
 
             return View(model);
@@ -287,6 +328,21 @@ namespace Nop.Admin.Controllers
                 _settingService.SaveSetting(vendorSettings, x => x.AllowCustomersToContactVendors, storeScope, false);
             else if (storeScope > 0)
                 _settingService.DeleteSetting(vendorSettings, x => x.AllowCustomersToContactVendors, storeScope);
+
+            if (model.AllowCustomersToApplyForVendorAccount_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(vendorSettings, x => x.AllowCustomersToApplyForVendorAccount, storeScope, false);
+            else if (storeScope > 0)
+                _settingService.DeleteSetting(vendorSettings, x => x.AllowCustomersToApplyForVendorAccount, storeScope);
+
+            if (model.AllowSearchByVendor_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(vendorSettings, x => x.AllowSearchByVendor, storeScope);
+            else if (storeScope > 0)
+                _settingService.DeleteSetting(vendorSettings, x => x.AllowSearchByVendor, storeScope);
+
+            if (model.MaximumProductNumber_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(vendorSettings, x => x.MaximumProductNumber, storeScope, false);
+            else if (storeScope > 0)
+                _settingService.DeleteSetting(vendorSettings, x => x.MaximumProductNumber, storeScope);
 
             //now clear settings cache
             _settingService.ClearCache();
@@ -592,10 +648,10 @@ namespace Nop.Admin.Controllers
                 model.ShippingOriginAddress = new AddressModel();
 
             model.ShippingOriginAddress.AvailableCountries.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Address.SelectCountry"), Value = "0" });
-            foreach (var c in _countryService.GetAllCountries(true))
+            foreach (var c in _countryService.GetAllCountries(showHidden: true))
                 model.ShippingOriginAddress.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id.ToString(), Selected = (originAddress != null && c.Id == originAddress.CountryId) });
 
-            var states = originAddress != null && originAddress.Country != null ? _stateProvinceService.GetStateProvincesByCountryId(originAddress.Country.Id, true).ToList() : new List<StateProvince>();
+            var states = originAddress != null && originAddress.Country != null ? _stateProvinceService.GetStateProvincesByCountryId(originAddress.Country.Id, showHidden: true).ToList() : new List<StateProvince>();
             if (states.Count > 0)
             {
                 foreach (var s in states)
@@ -772,7 +828,7 @@ namespace Nop.Admin.Controllers
 
             //EU VAT countries
             model.EuVatShopCountries.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Address.SelectCountry"), Value = "0" });
-            foreach (var c in _countryService.GetAllCountries(true))
+            foreach (var c in _countryService.GetAllCountries(showHidden: true))
                 model.EuVatShopCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id.ToString(), Selected = c.Id == taxSettings.EuVatShopCountryId });
 
             //default tax address
@@ -785,10 +841,10 @@ namespace Nop.Admin.Controllers
                 model.DefaultTaxAddress = new AddressModel();
 
             model.DefaultTaxAddress.AvailableCountries.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Address.SelectCountry"), Value = "0" });
-            foreach (var c in _countryService.GetAllCountries(true))
+            foreach (var c in _countryService.GetAllCountries(showHidden: true))
                 model.DefaultTaxAddress.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id.ToString(), Selected = (defaultAddress != null && c.Id == defaultAddress.CountryId) });
 
-            var states = defaultAddress != null && defaultAddress.Country != null ? _stateProvinceService.GetStateProvincesByCountryId(defaultAddress.Country.Id, true).ToList() : new List<StateProvince>();
+            var states = defaultAddress != null && defaultAddress.Country != null ? _stateProvinceService.GetStateProvincesByCountryId(defaultAddress.Country.Id, showHidden: true).ToList() : new List<StateProvince>();
             if (states.Count > 0)
             {
                 foreach (var s in states)
@@ -978,6 +1034,8 @@ namespace Nop.Admin.Controllers
             model.ActiveStoreScopeConfiguration = storeScope;
             if (storeScope > 0)
             {
+                model.AllowViewUnpublishedProductPage_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.AllowViewUnpublishedProductPage, storeScope);
+                model.DisplayDiscontinuedMessageForUnpublishedProducts_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.DisplayDiscontinuedMessageForUnpublishedProducts, storeScope);
                 model.ShowProductSku_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ShowProductSku, storeScope);
                 model.ShowManufacturerPartNumber_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ShowManufacturerPartNumber, storeScope);
                 model.ShowGtin_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ShowGtin, storeScope);
@@ -997,8 +1055,8 @@ namespace Nop.Admin.Controllers
                 model.AllowAnonymousUsersToEmailAFriend_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.AllowAnonymousUsersToEmailAFriend, storeScope);
                 model.RecentlyViewedProductsNumber_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.RecentlyViewedProductsNumber, storeScope);
                 model.RecentlyViewedProductsEnabled_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.RecentlyViewedProductsEnabled, storeScope);
-                model.RecentlyAddedProductsNumber_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.RecentlyAddedProductsNumber, storeScope);
-                model.RecentlyAddedProductsEnabled_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.RecentlyAddedProductsEnabled, storeScope);
+                model.NewProductsNumber_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.NewProductsNumber, storeScope);
+                model.NewProductsEnabled_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.NewProductsEnabled, storeScope);
                 model.CompareProductsEnabled_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.CompareProductsEnabled, storeScope);
                 model.ShowBestsellersOnHomepage_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ShowBestsellersOnHomepage, storeScope);
                 model.NumberOfBestsellersOnHomepage_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.NumberOfBestsellersOnHomepage, storeScope);
@@ -1011,8 +1069,6 @@ namespace Nop.Admin.Controllers
                 model.ProductSearchTermMinimumLength_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ProductSearchTermMinimumLength, storeScope);
                 model.ProductsAlsoPurchasedEnabled_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ProductsAlsoPurchasedEnabled, storeScope);
                 model.ProductsAlsoPurchasedNumber_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ProductsAlsoPurchasedNumber, storeScope);
-                model.EnableDynamicPriceUpdate_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.EnableDynamicPriceUpdate, storeScope);
-                model.DynamicPriceUpdateAjax_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.DynamicPriceUpdateAjax, storeScope);
                 model.NumberOfProductTags_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.NumberOfProductTags, storeScope);
                 model.ProductsByTagPageSize_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ProductsByTagPageSize, storeScope);
                 model.ProductsByTagAllowCustomersToSelectPageSize_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ProductsByTagAllowCustomersToSelectPageSize, storeScope);
@@ -1028,8 +1084,10 @@ namespace Nop.Admin.Controllers
                 model.DisplayTaxShippingInfoFooter_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.DisplayTaxShippingInfoFooter, storeScope);
                 model.DisplayTaxShippingInfoProductDetailsPage_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.DisplayTaxShippingInfoProductDetailsPage, storeScope);
                 model.DisplayTaxShippingInfoProductBoxes_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.DisplayTaxShippingInfoProductBoxes, storeScope);
+                model.DisplayTaxShippingInfoShoppingCart_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.DisplayTaxShippingInfoShoppingCart, storeScope);
                 model.DisplayTaxShippingInfoWishlist_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.DisplayTaxShippingInfoWishlist, storeScope);
                 model.DisplayTaxShippingInfoOrderDetailsPage_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.DisplayTaxShippingInfoOrderDetailsPage, storeScope);
+                model.ShowProductReviewsPerStore_OverrideForStore = _settingService.SettingExists(catalogSettings, x => x.ShowProductReviewsPerStore, storeScope);
             }
             return View(model);
         }
@@ -1048,6 +1106,16 @@ namespace Nop.Admin.Controllers
             /* We do not clear cache after each setting update.
              * This behavior can increase performance because cached settings will not be cleared 
              * and loaded from database after each update */
+            if (model.AllowViewUnpublishedProductPage_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(catalogSettings, x => x.AllowViewUnpublishedProductPage, storeScope, false);
+            else if (storeScope > 0)
+                _settingService.DeleteSetting(catalogSettings, x => x.AllowViewUnpublishedProductPage, storeScope);
+
+            if (model.DisplayDiscontinuedMessageForUnpublishedProducts_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(catalogSettings, x => x.DisplayDiscontinuedMessageForUnpublishedProducts, storeScope, false);
+            else if (storeScope > 0)
+                _settingService.DeleteSetting(catalogSettings, x => x.DisplayDiscontinuedMessageForUnpublishedProducts, storeScope);
+
             if (model.ShowProductSku_OverrideForStore || storeScope == 0)
                 _settingService.SaveSetting(catalogSettings, x => x.ShowProductSku, storeScope, false);
             else if (storeScope > 0)
@@ -1143,15 +1211,15 @@ namespace Nop.Admin.Controllers
             else if (storeScope > 0)
                 _settingService.DeleteSetting(catalogSettings, x => x.RecentlyViewedProductsEnabled, storeScope);
             
-            if (model.RecentlyAddedProductsNumber_OverrideForStore || storeScope == 0)
-                _settingService.SaveSetting(catalogSettings, x => x.RecentlyAddedProductsNumber, storeScope, false);
+            if (model.NewProductsNumber_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(catalogSettings, x => x.NewProductsNumber, storeScope, false);
             else if (storeScope > 0)
-                _settingService.DeleteSetting(catalogSettings, x => x.RecentlyAddedProductsNumber, storeScope);
+                _settingService.DeleteSetting(catalogSettings, x => x.NewProductsNumber, storeScope);
             
-            if (model.RecentlyAddedProductsEnabled_OverrideForStore || storeScope == 0)
-                _settingService.SaveSetting(catalogSettings, x => x.RecentlyAddedProductsEnabled, storeScope, false);
+            if (model.NewProductsEnabled_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(catalogSettings, x => x.NewProductsEnabled, storeScope, false);
             else if (storeScope > 0)
-                _settingService.DeleteSetting(catalogSettings, x => x.RecentlyAddedProductsEnabled, storeScope);
+                _settingService.DeleteSetting(catalogSettings, x => x.NewProductsEnabled, storeScope);
             
             if (model.CompareProductsEnabled_OverrideForStore || storeScope == 0)
                 _settingService.SaveSetting(catalogSettings, x => x.CompareProductsEnabled, storeScope, false);
@@ -1212,16 +1280,6 @@ namespace Nop.Admin.Controllers
                 _settingService.SaveSetting(catalogSettings, x => x.ProductsAlsoPurchasedNumber, storeScope, false);
             else if (storeScope > 0)
                 _settingService.DeleteSetting(catalogSettings, x => x.ProductsAlsoPurchasedNumber, storeScope);
-            
-            if (model.EnableDynamicPriceUpdate_OverrideForStore || storeScope == 0)
-                _settingService.SaveSetting(catalogSettings, x => x.EnableDynamicPriceUpdate, storeScope, false);
-            else if (storeScope > 0)
-                _settingService.DeleteSetting(catalogSettings, x => x.EnableDynamicPriceUpdate, storeScope);
-
-            if (model.DynamicPriceUpdateAjax_OverrideForStore || storeScope == 0)
-                _settingService.SaveSetting(catalogSettings, x => x.DynamicPriceUpdateAjax, storeScope, false);
-            else if (storeScope > 0)
-                _settingService.DeleteSetting(catalogSettings, x => x.DynamicPriceUpdateAjax, storeScope);
             
             if (model.NumberOfProductTags_OverrideForStore || storeScope == 0)
                 _settingService.SaveSetting(catalogSettings, x => x.NumberOfProductTags, storeScope, false);
@@ -1298,6 +1356,11 @@ namespace Nop.Admin.Controllers
             else if (storeScope > 0)
                 _settingService.DeleteSetting(catalogSettings, x => x.DisplayTaxShippingInfoProductBoxes, storeScope);
 
+            if (model.DisplayTaxShippingInfoShoppingCart_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(catalogSettings, x => x.DisplayTaxShippingInfoShoppingCart, storeScope, false);
+            else if (storeScope > 0)
+                _settingService.DeleteSetting(catalogSettings, x => x.DisplayTaxShippingInfoShoppingCart, storeScope);
+
             if (model.DisplayTaxShippingInfoWishlist_OverrideForStore || storeScope == 0)
                 _settingService.SaveSetting(catalogSettings, x => x.DisplayTaxShippingInfoWishlist, storeScope, false);
             else if (storeScope > 0)
@@ -1308,6 +1371,11 @@ namespace Nop.Admin.Controllers
             else if (storeScope > 0)
                 _settingService.DeleteSetting(catalogSettings, x => x.DisplayTaxShippingInfoOrderDetailsPage, storeScope);
 
+            if (model.ShowProductReviewsPerStore_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(catalogSettings, x => x.ShowProductReviewsPerStore, storeScope, false);
+            else if (storeScope > 0)
+                _settingService.DeleteSetting(catalogSettings, x => x.ShowProductReviewsPerStore, storeScope);
+
             //now clear settings cache
             _settingService.ClearCache();
 
@@ -1317,12 +1385,64 @@ namespace Nop.Admin.Controllers
             SuccessNotification(_localizationService.GetResource("Admin.Configuration.Updated"));
 
             //selected tab
-            SaveSelectedTabIndex();
+            SaveSelectedTabName();
 
             return RedirectToAction("Catalog");
         }
 
+        #region Sort options
 
+        [HttpPost]
+        public ActionResult SortOptionsList(DataSourceRequest command)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var storeScope = this.GetActiveStoreScopeConfiguration(_storeService, _workContext);
+            var catalogSettings = _settingService.LoadSetting<CatalogSettings>(storeScope);
+            var model = new List<SortOptionModel>();
+            foreach (int option in Enum.GetValues(typeof(ProductSortingEnum)))
+            {
+                int value;
+                model.Add(new SortOptionModel()
+                {
+                    Id = option,
+                    Name = ((ProductSortingEnum)option).GetLocalizedEnum(_localizationService, _workContext),
+                    IsActive = !catalogSettings.ProductSortingEnumDisabled.Contains(option),
+                    DisplayOrder = catalogSettings.ProductSortingEnumDisplayOrder.TryGetValue(option, out value) ? value : option
+                });
+            }
+            var gridModel = new DataSourceResult
+            {
+                Data = model.OrderBy(option => option.DisplayOrder),
+                Total = model.Count
+            };
+            return Json(gridModel);
+        }
+
+        [HttpPost]
+        public ActionResult SortOptionUpdate(SortOptionModel model)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var storeScope = this.GetActiveStoreScopeConfiguration(_storeService, _workContext);
+            var catalogSettings = _settingService.LoadSetting<CatalogSettings>(storeScope);
+
+            catalogSettings.ProductSortingEnumDisplayOrder[model.Id] = model.DisplayOrder;
+            if (model.IsActive && catalogSettings.ProductSortingEnumDisabled.Contains(model.Id))
+                catalogSettings.ProductSortingEnumDisabled.Remove(model.Id);
+            if (!model.IsActive && !catalogSettings.ProductSortingEnumDisabled.Contains(model.Id))
+                catalogSettings.ProductSortingEnumDisabled.Add(model.Id);
+
+            _settingService.SaveSetting(catalogSettings, x => x.ProductSortingEnumDisabled, storeScope, false);
+            _settingService.SaveSetting(catalogSettings, x => x.ProductSortingEnumDisplayOrder, storeScope, false);
+            _settingService.ClearCache();
+
+            return new NullJsonResult();
+        }
+
+        #endregion
 
         public ActionResult RewardPoints()
         {
@@ -1345,7 +1465,9 @@ namespace Nop.Admin.Controllers
                     _settingService.SettingExists(rewardPointsSettings, x => x.PointsForPurchases_Points, storeScope);
                 model.PointsForPurchases_Awarded_OverrideForStore = _settingService.SettingExists(rewardPointsSettings, x => x.PointsForPurchases_Awarded, storeScope);
                 model.PointsForPurchases_Canceled_OverrideForStore = _settingService.SettingExists(rewardPointsSettings, x => x.PointsForPurchases_Canceled, storeScope);
-                model.DisplayHowMuchWillBeEarned_OverrideForStore = _settingService.SettingExists(rewardPointsSettings, x => x.DisplayHowMuchWillBeEarned, storeScope); model.PointsForRegistration_OverrideForStore = _settingService.SettingExists(rewardPointsSettings, x => x.PointsForRegistration, storeScope);
+                model.DisplayHowMuchWillBeEarned_OverrideForStore = _settingService.SettingExists(rewardPointsSettings, x => x.DisplayHowMuchWillBeEarned, storeScope);
+                model.PointsForRegistration_OverrideForStore = _settingService.SettingExists(rewardPointsSettings, x => x.PointsForRegistration, storeScope);
+                model.PageSize_OverrideForStore = _settingService.SettingExists(rewardPointsSettings, x => x.PageSize, storeScope);
             }
             var currencySettings = _settingService.LoadSetting<CurrencySettings>(storeScope); 
             model.PrimaryStoreCurrencyCode = _currencyService.GetCurrencyById(currencySettings.PrimaryStoreCurrencyId).CurrencyCode;
@@ -1412,7 +1534,14 @@ namespace Nop.Admin.Controllers
                     _settingService.SaveSetting(rewardPointsSettings, x => x.DisplayHowMuchWillBeEarned, storeScope, false);
                 else if (storeScope > 0)
                     _settingService.DeleteSetting(rewardPointsSettings, x => x.DisplayHowMuchWillBeEarned, storeScope);
-                
+
+                if (model.PageSize_OverrideForStore || storeScope == 0)
+                    _settingService.SaveSetting(rewardPointsSettings, x => x.PageSize, storeScope, false);
+                else if (storeScope > 0)
+                    _settingService.DeleteSetting(rewardPointsSettings, x => x.PageSize, storeScope);
+
+                _settingService.SaveSetting(rewardPointsSettings, x => x.PointsAccumulatedForAllStores, 0, false);
+
                 //now clear settings cache
                 _settingService.ClearCache();
 
@@ -1450,6 +1579,7 @@ namespace Nop.Admin.Controllers
             {
                 model.IsReOrderAllowed_OverrideForStore = _settingService.SettingExists(orderSettings, x => x.IsReOrderAllowed, storeScope);
                 model.MinOrderSubtotalAmount_OverrideForStore = _settingService.SettingExists(orderSettings, x => x.MinOrderSubtotalAmount, storeScope);
+                model.MinOrderSubtotalAmountIncludingTax_OverrideForStore = _settingService.SettingExists(orderSettings, x => x.MinOrderSubtotalAmountIncludingTax, storeScope);
                 model.MinOrderTotalAmount_OverrideForStore = _settingService.SettingExists(orderSettings, x => x.MinOrderTotalAmount, storeScope);
                 model.AnonymousCheckoutAllowed_OverrideForStore = _settingService.SettingExists(orderSettings, x => x.AnonymousCheckoutAllowed, storeScope);
                 model.TermsOfServiceOnShoppingCartPage_OverrideForStore = _settingService.SettingExists(orderSettings, x => x.TermsOfServiceOnShoppingCartPage, storeScope);
@@ -1473,23 +1603,7 @@ namespace Nop.Admin.Controllers
             model.GiftCards_Activated_OrderStatuses.Insert(0, new SelectListItem { Text = "---", Value = "0" });
             model.GiftCards_Deactivated_OrderStatuses = OrderStatus.Pending.ToSelectList(false).ToList();
             model.GiftCards_Deactivated_OrderStatuses.Insert(0, new SelectListItem { Text = "---", Value = "0" });
-
-
-            //parse return request actions
-            for (int i = 0; i < orderSettings.ReturnRequestActions.Count; i++)
-            {
-                model.ReturnRequestActionsParsed += orderSettings.ReturnRequestActions[i];
-                if (i != orderSettings.ReturnRequestActions.Count - 1)
-                    model.ReturnRequestActionsParsed += ",";
-            }
-            //parse return request reasons
-            for (int i = 0; i < orderSettings.ReturnRequestReasons.Count; i++)
-            {
-                model.ReturnRequestReasonsParsed += orderSettings.ReturnRequestReasons[i];
-                if (i != orderSettings.ReturnRequestReasons.Count - 1)
-                    model.ReturnRequestReasonsParsed += ",";
-            }
-
+            
             //order ident
             model.OrderIdent = _maintenanceService.GetTableIdent<Order>();
 
@@ -1520,7 +1634,12 @@ namespace Nop.Admin.Controllers
                     _settingService.SaveSetting(orderSettings, x => x.MinOrderSubtotalAmount, storeScope, false);
                 else if (storeScope > 0)
                     _settingService.DeleteSetting(orderSettings, x => x.MinOrderSubtotalAmount, storeScope);
-                
+
+                if (model.MinOrderSubtotalAmountIncludingTax_OverrideForStore || storeScope == 0)
+                    _settingService.SaveSetting(orderSettings, x => x.MinOrderSubtotalAmountIncludingTax, storeScope, false);
+                else if (storeScope > 0)
+                    _settingService.DeleteSetting(orderSettings, x => x.MinOrderSubtotalAmountIncludingTax, storeScope);
+
                 if (model.MinOrderTotalAmount_OverrideForStore || storeScope == 0)
                     _settingService.SaveSetting(orderSettings, x => x.MinOrderTotalAmount, storeScope, false);
                 else if (storeScope > 0)
@@ -1593,29 +1712,7 @@ namespace Nop.Admin.Controllers
                     _settingService.SaveSetting(orderSettings, x => x.ReturnRequestsEnabled, storeScope, false);
                 else if (storeScope > 0)
                     _settingService.DeleteSetting(orderSettings, x => x.ReturnRequestsEnabled, storeScope);
-
-                //parse return request actions
-                orderSettings.ReturnRequestActions.Clear();
-                if (model.ReturnRequestActionsParsed != null)
-                {
-                    foreach (var returnAction in model.ReturnRequestActionsParsed.Split(new [] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-                        orderSettings.ReturnRequestActions.Add(returnAction);
-                }
-                //note that we do not store this setting for a store (cannot be overridden)
-                //pass 0 as "storeScope" parameter
-                _settingService.SaveSetting(orderSettings, x => x.ReturnRequestActions, 0, false);
-                //parse return request reasons
-                orderSettings.ReturnRequestReasons.Clear();
-                if (model.ReturnRequestReasonsParsed != null)
-                {
-                    foreach (var returnReason in model.ReturnRequestReasonsParsed.Split(new [] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-                        orderSettings.ReturnRequestReasons.Add(returnReason);
-                }
-                //note that we do not store this setting for a store (cannot be overridden)
-                //pass 0 as "storeScope" parameter
-                _settingService.SaveSetting(orderSettings, x => x.ReturnRequestReasons, 0, false);
-
-
+                
                 //now clear settings cache
                 _settingService.ClearCache();
                 
@@ -1646,10 +1743,261 @@ namespace Nop.Admin.Controllers
             }
 
             //selected tab
-            SaveSelectedTabIndex();
+            SaveSelectedTabName();
 
             return RedirectToAction("Order");
         }
+
+        #region Return request reasons
+
+        public ActionResult ReturnRequestReasonList()
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            //we just redirect a user to the order settings page
+
+            //select "return request" tab
+            SaveSelectedTabName("tab-returnrequest");
+            return RedirectToAction("Order", "Setting");
+        }
+        [HttpPost]
+        public ActionResult ReturnRequestReasonList(DataSourceRequest command)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var reasons = _returnRequestService.GetAllReturnRequestReasons();
+            var gridModel = new DataSourceResult
+            {
+                Data = reasons.Select(x => x.ToModel()),
+                Total = reasons.Count
+            };
+            return Json(gridModel);
+        }
+        //create
+        public ActionResult ReturnRequestReasonCreate()
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var model = new ReturnRequestReasonModel();
+            //locales
+            AddLocales(_languageService, model.Locales);
+            return View(model);
+        }
+        [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
+        public ActionResult ReturnRequestReasonCreate(ReturnRequestReasonModel model, bool continueEditing)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            if (ModelState.IsValid)
+            {
+                var rrr = model.ToEntity();
+                _returnRequestService.InsertReturnRequestReason(rrr);
+                //locales
+                UpdateLocales(rrr, model);
+
+                SuccessNotification(_localizationService.GetResource("Admin.Configuration.Settings.Order.ReturnRequestReasons.Added"));
+                return continueEditing ? RedirectToAction("ReturnRequestReasonEdit", new { id = rrr.Id }) : RedirectToAction("ReturnRequestReasonList");
+            }
+
+            //If we got this far, something failed, redisplay form
+            return View(model);
+        }
+        //edit
+        public ActionResult ReturnRequestReasonEdit(int id)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var rrr = _returnRequestService.GetReturnRequestReasonById(id);
+            if (rrr == null)
+                //No reason found with the specified id
+                return RedirectToAction("ReturnRequestReasonList");
+
+            var model = rrr.ToModel();
+            //locales
+            AddLocales(_languageService, model.Locales, (locale, languageId) =>
+            {
+                locale.Name = rrr.GetLocalized(x => x.Name, languageId, false, false);
+            });
+            return View(model);
+        }
+        [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
+        public ActionResult ReturnRequestReasonEdit(ReturnRequestReasonModel model, bool continueEditing)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var rrr = _returnRequestService.GetReturnRequestReasonById(model.Id);
+            if (rrr == null)
+                //No reason found with the specified id
+                return RedirectToAction("ReturnRequestReasonList");
+
+            if (ModelState.IsValid)
+            {
+                rrr = model.ToEntity(rrr);
+                _returnRequestService.UpdateReturnRequestReason(rrr);
+                //locales
+                UpdateLocales(rrr, model);
+
+                SuccessNotification(_localizationService.GetResource("Admin.Configuration.Settings.Order.ReturnRequestReasons.Updated"));
+                if (continueEditing)
+                {
+                    //selected tab
+                    SaveSelectedTabName();
+
+                    return RedirectToAction("ReturnRequestReasonEdit", new { id = rrr.Id });
+                }
+                return RedirectToAction("ReturnRequestReasonList");
+            }
+
+            //If we got this far, something failed, redisplay form
+            return View(model);
+        }
+        //delete
+        [HttpPost]
+        public ActionResult ReturnRequestReasonDelete(int id)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var rrr = _returnRequestService.GetReturnRequestReasonById(id);
+            _returnRequestService.DeleteReturnRequestReason(rrr);
+
+            SuccessNotification(_localizationService.GetResource("Admin.Configuration.Settings.Order.ReturnRequestReasons.Deleted"));
+            return RedirectToAction("ReturnRequestReasonList");
+        }
+
+        #endregion
+
+        #region Return request actions
+
+        public ActionResult ReturnRequestActionList()
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            //we just redirect a user to the order settings page
+
+            //select "return request" tab
+            SaveSelectedTabName("tab-returnrequest");
+            return RedirectToAction("Order", "Setting");
+        }
+        [HttpPost]
+        public ActionResult ReturnRequestActionList(DataSourceRequest command)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var actions = _returnRequestService.GetAllReturnRequestActions();
+            var gridModel = new DataSourceResult
+            {
+                Data = actions.Select(x => x.ToModel()),
+                Total = actions.Count
+            };
+            return Json(gridModel);
+        }
+        //create
+        public ActionResult ReturnRequestActionCreate()
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var model = new ReturnRequestActionModel();
+            //locales
+            AddLocales(_languageService, model.Locales);
+            return View(model);
+        }
+        [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
+        public ActionResult ReturnRequestActionCreate(ReturnRequestActionModel model, bool continueEditing)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            if (ModelState.IsValid)
+            {
+                var rra = model.ToEntity();
+                _returnRequestService.InsertReturnRequestAction(rra);
+                //locales
+                UpdateLocales(rra, model);
+
+                SuccessNotification(_localizationService.GetResource("Admin.Configuration.Settings.Order.ReturnRequestActions.Added"));
+                return continueEditing ? RedirectToAction("ReturnRequestActionEdit", new { id = rra.Id }) : RedirectToAction("ReturnRequestActionList");
+            }
+
+            //If we got this far, something failed, redisplay form
+            return View(model);
+        }
+        //edit
+        public ActionResult ReturnRequestActionEdit(int id)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var rra = _returnRequestService.GetReturnRequestActionById(id);
+            if (rra == null)
+                //No action found with the specified id
+                return RedirectToAction("ReturnRequestActionList");
+
+            var model = rra.ToModel();
+            //locales
+            AddLocales(_languageService, model.Locales, (locale, languageId) =>
+            {
+                locale.Name = rra.GetLocalized(x => x.Name, languageId, false, false);
+            });
+            return View(model);
+        }
+        [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
+        public ActionResult ReturnRequestActionEdit(ReturnRequestActionModel model, bool continueEditing)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var rra = _returnRequestService.GetReturnRequestActionById(model.Id);
+            if (rra == null)
+                //No action found with the specified id
+                return RedirectToAction("ReturnRequestActionList");
+
+            if (ModelState.IsValid)
+            {
+                rra = model.ToEntity(rra);
+                _returnRequestService.UpdateReturnRequestAction(rra);
+                //locales
+                UpdateLocales(rra, model);
+
+                SuccessNotification(_localizationService.GetResource("Admin.Configuration.Settings.Order.ReturnRequestActions.Updated"));
+                if (continueEditing)
+                {
+                    //selected tab
+                    SaveSelectedTabName();
+
+                    return RedirectToAction("ReturnRequestActionEdit", new { id = rra.Id });
+                }
+                return RedirectToAction("ReturnRequestActionList");
+            }
+
+            //If we got this far, something failed, redisplay form
+            return View(model);
+        }
+        //delete
+        [HttpPost]
+        public ActionResult ReturnRequestActionDelete(int id)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
+                return AccessDeniedView();
+
+            var rra = _returnRequestService.GetReturnRequestActionById(id);
+            _returnRequestService.DeleteReturnRequestAction(rra);
+
+            SuccessNotification(_localizationService.GetResource("Admin.Configuration.Settings.Order.ReturnRequestActions.Deleted"));
+            return RedirectToAction("ReturnRequestActionList");
+        }
+
+        #endregion
+
 
 
 
@@ -1818,6 +2166,7 @@ namespace Nop.Admin.Controllers
                 model.AssociatedProductPictureSize_OverrideForStore = _settingService.SettingExists(mediaSettings, x => x.AssociatedProductPictureSize, storeScope);
                 model.CategoryThumbPictureSize_OverrideForStore = _settingService.SettingExists(mediaSettings, x => x.CategoryThumbPictureSize, storeScope);
                 model.ManufacturerThumbPictureSize_OverrideForStore = _settingService.SettingExists(mediaSettings, x => x.ManufacturerThumbPictureSize, storeScope);
+                model.VendorThumbPictureSize_OverrideForStore = _settingService.SettingExists(mediaSettings, x => x.VendorThumbPictureSize, storeScope);
                 model.CartThumbPictureSize_OverrideForStore = _settingService.SettingExists(mediaSettings, x => x.CartThumbPictureSize, storeScope);
                 model.MiniCartThumbPictureSize_OverrideForStore = _settingService.SettingExists(mediaSettings, x => x.MiniCartThumbPictureSize, storeScope);
                 model.MaximumImageSize_OverrideForStore = _settingService.SettingExists(mediaSettings, x => x.MaximumImageSize, storeScope);
@@ -1876,6 +2225,11 @@ namespace Nop.Admin.Controllers
                 _settingService.SaveSetting(mediaSettings, x => x.ManufacturerThumbPictureSize, storeScope, false);
             else if (storeScope > 0)
                 _settingService.DeleteSetting(mediaSettings, x => x.ManufacturerThumbPictureSize, storeScope);
+
+            if (model.VendorThumbPictureSize_OverrideForStore || storeScope == 0)
+                _settingService.SaveSetting(mediaSettings, x => x.VendorThumbPictureSize, storeScope, false);
+            else if (storeScope > 0)
+                _settingService.DeleteSetting(mediaSettings, x => x.VendorThumbPictureSize, storeScope);
             
             if (model.CartThumbPictureSize_OverrideForStore || storeScope == 0)
                 _settingService.SaveSetting(mediaSettings, x => x.CartThumbPictureSize, storeScope, false);
@@ -1993,7 +2347,7 @@ namespace Nop.Admin.Controllers
             SuccessNotification(_localizationService.GetResource("Admin.Configuration.Updated"));
 
             //selected tab
-            SaveSelectedTabIndex();
+            SaveSelectedTabName();
 
             return RedirectToAction("CustomerUser");
         }
@@ -2018,7 +2372,6 @@ namespace Nop.Admin.Controllers
             var storeInformationSettings = _settingService.LoadSetting<StoreInformationSettings>(storeScope);
             var commonSettings = _settingService.LoadSetting<CommonSettings>(storeScope);
             model.StoreInformationSettings.StoreClosed = storeInformationSettings.StoreClosed;
-            model.StoreInformationSettings.StoreClosedAllowForAdmins = storeInformationSettings.StoreClosedAllowForAdmins;
             //themes
             model.StoreInformationSettings.DefaultStoreTheme = storeInformationSettings.DefaultStoreTheme;
             model.StoreInformationSettings.AvailableStoreThemes = _themeProvider
@@ -2048,7 +2401,6 @@ namespace Nop.Admin.Controllers
             if (storeScope > 0)
             {
                 model.StoreInformationSettings.StoreClosed_OverrideForStore = _settingService.SettingExists(storeInformationSettings, x => x.StoreClosed, storeScope);
-                model.StoreInformationSettings.StoreClosedAllowForAdmins_OverrideForStore = _settingService.SettingExists(storeInformationSettings, x => x.StoreClosedAllowForAdmins, storeScope);
                 model.StoreInformationSettings.DefaultStoreTheme_OverrideForStore = _settingService.SettingExists(storeInformationSettings, x => x.DefaultStoreTheme, storeScope);
                 model.StoreInformationSettings.AllowCustomerToSelectTheme_OverrideForStore = _settingService.SettingExists(storeInformationSettings, x => x.AllowCustomerToSelectTheme, storeScope);
                 model.StoreInformationSettings.DisplayEuCookieLawWarning_OverrideForStore = _settingService.SettingExists(storeInformationSettings, x => x.DisplayEuCookieLawWarning, storeScope);
@@ -2119,6 +2471,9 @@ namespace Nop.Admin.Controllers
             model.SecuritySettings.CaptchaShowOnBlogCommentPage = captchaSettings.ShowOnBlogCommentPage;
             model.SecuritySettings.CaptchaShowOnNewsCommentPage = captchaSettings.ShowOnNewsCommentPage;
             model.SecuritySettings.CaptchaShowOnProductReviewPage = captchaSettings.ShowOnProductReviewPage;
+            model.SecuritySettings.CaptchaShowOnApplyVendorPage = captchaSettings.ShowOnApplyVendorPage;
+            model.SecuritySettings.ReCaptchaVersion = captchaSettings.ReCaptchaVersion;
+            model.SecuritySettings.AvailableReCaptchaVersions = ReCaptchaVersion.Version1.ToSelectList(false).ToList();
             model.SecuritySettings.ReCaptchaPublicKey = captchaSettings.ReCaptchaPublicKey;
             model.SecuritySettings.ReCaptchaPrivateKey = captchaSettings.ReCaptchaPrivateKey;
 
@@ -2172,7 +2527,6 @@ namespace Nop.Admin.Controllers
             var storeInformationSettings = _settingService.LoadSetting<StoreInformationSettings>(storeScope);
             var commonSettings = _settingService.LoadSetting<CommonSettings>(storeScope);
             storeInformationSettings.StoreClosed = model.StoreInformationSettings.StoreClosed;
-            storeInformationSettings.StoreClosedAllowForAdmins = model.StoreInformationSettings.StoreClosedAllowForAdmins;
             storeInformationSettings.DefaultStoreTheme = model.StoreInformationSettings.DefaultStoreTheme;
             storeInformationSettings.AllowCustomerToSelectTheme = model.StoreInformationSettings.AllowCustomerToSelectTheme;
             //EU Cookie law
@@ -2194,12 +2548,7 @@ namespace Nop.Admin.Controllers
                 _settingService.SaveSetting(storeInformationSettings, x => x.StoreClosed, storeScope, false);
             else if (storeScope > 0)
                 _settingService.DeleteSetting(storeInformationSettings, x => x.StoreClosed, storeScope);
-
-            if (model.StoreInformationSettings.StoreClosedAllowForAdmins_OverrideForStore || storeScope == 0)
-                _settingService.SaveSetting(storeInformationSettings, x => x.StoreClosedAllowForAdmins, storeScope, false);
-            else if (storeScope > 0)
-                _settingService.DeleteSetting(storeInformationSettings, x => x.StoreClosedAllowForAdmins, storeScope);
-
+            
             if (model.StoreInformationSettings.DefaultStoreTheme_OverrideForStore || storeScope == 0)
                 _settingService.SaveSetting(storeInformationSettings, x => x.DefaultStoreTheme, storeScope, false);
             else if (storeScope > 0)
@@ -2363,6 +2712,8 @@ namespace Nop.Admin.Controllers
             captchaSettings.ShowOnBlogCommentPage = model.SecuritySettings.CaptchaShowOnBlogCommentPage;
             captchaSettings.ShowOnNewsCommentPage = model.SecuritySettings.CaptchaShowOnNewsCommentPage;
             captchaSettings.ShowOnProductReviewPage = model.SecuritySettings.CaptchaShowOnProductReviewPage;
+            captchaSettings.ShowOnApplyVendorPage = model.SecuritySettings.CaptchaShowOnApplyVendorPage;
+            captchaSettings.ReCaptchaVersion = model.SecuritySettings.ReCaptchaVersion;
             captchaSettings.ReCaptchaPublicKey = model.SecuritySettings.ReCaptchaPublicKey;
             captchaSettings.ReCaptchaPrivateKey = model.SecuritySettings.ReCaptchaPrivateKey;
             _settingService.SaveSetting(captchaSettings);
@@ -2440,7 +2791,7 @@ namespace Nop.Admin.Controllers
             SuccessNotification(_localizationService.GetResource("Admin.Configuration.Updated"));
 
             //selected tab
-            SaveSelectedTabIndex();
+            SaveSelectedTabName();
 
             return RedirectToAction("GeneralCommon");
         }
@@ -2524,7 +2875,7 @@ namespace Nop.Admin.Controllers
             }
 
             //selected tab
-            SaveSelectedTabIndex();
+            SaveSelectedTabName();
 
             return RedirectToAction("GeneralCommon");
         }
@@ -2567,7 +2918,7 @@ namespace Nop.Admin.Controllers
             }
 
             //selected tab
-            SaveSelectedTabIndex();
+            SaveSelectedTabName();
 
             return RedirectToAction("GeneralCommon");
         }
@@ -2587,14 +2938,19 @@ namespace Nop.Admin.Controllers
         //do not validate request token (XSRF)
         //for some reasons it does not work with "filtering" support
         [AdminAntiForgery(true)] 
-        public ActionResult AllSettings(DataSourceRequest command,
-            Nop.Web.Framework.Kendoui.Filter filter = null, IEnumerable<Sort> sort = null)
+        public ActionResult AllSettings(DataSourceRequest command, AllSettingsListModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageSettings))
                 return AccessDeniedView();
 
-            var settings = _settingService
-                .GetAllSettings()
+            var query = _settingService.GetAllSettings().AsQueryable();
+
+            if (!string.IsNullOrEmpty(model.SearchSettingName))
+                query = query.Where(s => s.Name.ToLowerInvariant().Contains(model.SearchSettingName.ToLowerInvariant()));
+            if (!string.IsNullOrEmpty(model.SearchSettingValue))
+                query = query.Where(s => s.Value.ToLowerInvariant().Contains(model.SearchSettingValue.ToLowerInvariant()));
+
+            var settings = query.ToList()
                 .Select(x =>
                             {
                                 string storeName;
@@ -2617,9 +2973,7 @@ namespace Nop.Admin.Controllers
                                 };
                                 return settingModel;
                             })
-                .AsQueryable()
-                .Filter(filter)
-                .Sort(sort);
+                .AsQueryable();
 
             var gridModel = new DataSourceResult
             {

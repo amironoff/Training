@@ -53,6 +53,7 @@ namespace Nop.Web.Controllers
         private readonly IPaymentService _paymentService;
         private readonly IPluginFinder _pluginFinder;
         private readonly IOrderTotalCalculationService _orderTotalCalculationService;
+        private readonly IRewardPointService _rewardPointService;
         private readonly ILogger _logger;
         private readonly IOrderService _orderService;
         private readonly IWebHelper _webHelper;
@@ -90,6 +91,7 @@ namespace Nop.Web.Controllers
             IPaymentService paymentService,
             IPluginFinder pluginFinder,
             IOrderTotalCalculationService orderTotalCalculationService,
+            IRewardPointService rewardPointService,
             ILogger logger,
             IOrderService orderService,
             IWebHelper webHelper,
@@ -120,6 +122,7 @@ namespace Nop.Web.Controllers
             this._paymentService = paymentService;
             this._pluginFinder = pluginFinder;
             this._orderTotalCalculationService = orderTotalCalculationService;
+            this._rewardPointService = rewardPointService;
             this._logger = logger;
             this._orderService = orderService;
             this._webHelper = webHelper;
@@ -152,16 +155,19 @@ namespace Nop.Web.Controllers
         }
 
         [NonAction]
-        protected virtual CheckoutBillingAddressModel PrepareBillingAddressModel(int? selectedCountryId = null, 
-            bool prePopulateNewAddressWithCustomerFields = false)
+        protected virtual CheckoutBillingAddressModel PrepareBillingAddressModel(int? selectedCountryId = null,
+            bool prePopulateNewAddressWithCustomerFields = false, string overrideAttributesXml = "")
         {
             var model = new CheckoutBillingAddressModel();
             //existing addresses
             var addresses = _workContext.CurrentCustomer.Addresses
-                //allow billing
-                .Where(a => a.Country == null || a.Country.AllowsBilling)
-                //enabled for the current store
-                .Where(a => a.Country == null || _storeMappingService.Authorize(a.Country))
+                .Where(a => a.Country == null || 
+                    (//published
+                    a.Country.Published && 
+                    //allow billing
+                    a.Country.AllowsBilling && 
+                    //enabled for the current store
+                    _storeMappingService.Authorize(a.Country)))
                 .ToList();
             foreach (var address in addresses)
             {
@@ -184,15 +190,16 @@ namespace Nop.Web.Controllers
                 stateProvinceService: _stateProvinceService,
                 addressAttributeService: _addressAttributeService,
                 addressAttributeParser: _addressAttributeParser,
-                loadCountries: () => _countryService.GetAllCountriesForBilling(),
+                loadCountries: () => _countryService.GetAllCountriesForBilling(_workContext.WorkingLanguage.Id),
                 prePopulateWithCustomerFields: prePopulateNewAddressWithCustomerFields,
-                customer: _workContext.CurrentCustomer);
+                customer: _workContext.CurrentCustomer,
+                overrideAttributesXml: overrideAttributesXml);
             return model;
         }
 
         [NonAction]
-        protected virtual CheckoutShippingAddressModel PrepareShippingAddressModel(int? selectedCountryId = null, 
-            bool prePopulateNewAddressWithCustomerFields = false)
+        protected virtual CheckoutShippingAddressModel PrepareShippingAddressModel(int? selectedCountryId = null,
+            bool prePopulateNewAddressWithCustomerFields = false, string overrideAttributesXml = "")
         {
             var model = new CheckoutShippingAddressModel();
             //allow pickup in store?
@@ -206,10 +213,13 @@ namespace Nop.Web.Controllers
             }
             //existing addresses
             var addresses = _workContext.CurrentCustomer.Addresses
-                //allow shipping
-                .Where(a => a.Country == null || a.Country.AllowsShipping)
-                //enabled for the current store
-                .Where(a => a.Country == null || _storeMappingService.Authorize(a.Country))
+                .Where(a => a.Country == null || 
+                    (//published
+                    a.Country.Published &&
+                    //allow shipping
+                    a.Country.AllowsShipping &&
+                    //enabled for the current store
+                    _storeMappingService.Authorize(a.Country)))
                 .ToList();
             foreach (var address in addresses)
             {
@@ -232,9 +242,10 @@ namespace Nop.Web.Controllers
                 stateProvinceService: _stateProvinceService,
                 addressAttributeService: _addressAttributeService,
                 addressAttributeParser: _addressAttributeParser,
-                loadCountries: () => _countryService.GetAllCountriesForShipping(),
+                loadCountries: () => _countryService.GetAllCountriesForShipping(_workContext.WorkingLanguage.Id),
                 prePopulateWithCustomerFields: prePopulateNewAddressWithCustomerFields,
-                customer: _workContext.CurrentCustomer);
+                customer: _workContext.CurrentCustomer,
+                overrideAttributesXml: overrideAttributesXml);
             return model;
         }
 
@@ -327,7 +338,7 @@ namespace Nop.Web.Controllers
             //reward points
             if (_rewardPointsSettings.Enabled && !cart.IsRecurring())
             {
-                int rewardPointsBalance = _workContext.CurrentCustomer.GetRewardPointsBalance();
+                int rewardPointsBalance = _rewardPointService.GetRewardPointsBalance(_workContext.CurrentCustomer.Id, _storeContext.CurrentStore.Id);
                 decimal rewardPointsAmountBase = _orderTotalCalculationService.ConvertRewardPointsToAmount(rewardPointsBalance);
                 decimal rewardPointsAmount = _currencyService.ConvertFromPrimaryStoreCurrency(rewardPointsAmountBase, _workContext.WorkingCurrency);
                 if (rewardPointsAmount > decimal.Zero && 
@@ -629,7 +640,9 @@ namespace Nop.Web.Controllers
 
 
             //If we got this far, something failed, redisplay form
-            model = PrepareBillingAddressModel(selectedCountryId: model.NewAddress.CountryId);
+            model = PrepareBillingAddressModel(
+                selectedCountryId: model.NewAddress.CountryId,
+                overrideAttributesXml: customAttributes);
             return View(model);
         }
 
@@ -776,7 +789,9 @@ namespace Nop.Web.Controllers
 
 
             //If we got this far, something failed, redisplay form
-            model = PrepareShippingAddressModel(selectedCountryId: model.NewAddress.CountryId);
+            model = PrepareShippingAddressModel(
+                selectedCountryId: model.NewAddress.CountryId,
+                overrideAttributesXml: customAttributes);
             return View(model);
         }
         
@@ -1330,7 +1345,7 @@ namespace Nop.Web.Controllers
             if (!_orderSettings.OnePageCheckoutEnabled)
                 return RedirectToRoute("Checkout");
 
-            if ((_workContext.CurrentCustomer.IsGuest() && !_orderSettings.AnonymousCheckoutAllowed))
+            if (_workContext.CurrentCustomer.IsGuest() && !_orderSettings.AnonymousCheckoutAllowed)
                 return new HttpUnauthorizedResult();
 
             var model = new OnePageCheckoutModel
@@ -1399,7 +1414,9 @@ namespace Nop.Web.Controllers
                     if (!ModelState.IsValid)
                     {
                         //model is not valid. redisplay the form with errors
-                        var billingAddressModel = PrepareBillingAddressModel(selectedCountryId: model.NewAddress.CountryId);
+                        var billingAddressModel = PrepareBillingAddressModel(
+                            selectedCountryId: model.NewAddress.CountryId,
+                            overrideAttributesXml: customAttributes);
                         billingAddressModel.NewAddressPreselected = true;
                         return Json(new
                         {
@@ -1456,6 +1473,10 @@ namespace Nop.Web.Controllers
                 }
 
                 //shipping is not required
+
+                _workContext.CurrentCustomer.ShippingAddress = null;
+                _customerService.UpdateCustomer(_workContext.CurrentCustomer);
+
                 _genericAttributeService.SaveAttribute<ShippingOption>(_workContext.CurrentCustomer, SystemCustomerAttributeNames.SelectedShippingOption, null, _storeContext.CurrentStore.Id);
 
                 //load next step
@@ -1560,7 +1581,9 @@ namespace Nop.Web.Controllers
                     if (!ModelState.IsValid)
                     {
                         //model is not valid. redisplay the form with errors
-                        var shippingAddressModel = PrepareShippingAddressModel(selectedCountryId: model.NewAddress.CountryId);
+                        var shippingAddressModel = PrepareShippingAddressModel(
+                            selectedCountryId: model.NewAddress.CountryId,
+                            overrideAttributesXml: customAttributes);
                         shippingAddressModel.NewAddressPreselected = true;
                         return Json(new
                         {

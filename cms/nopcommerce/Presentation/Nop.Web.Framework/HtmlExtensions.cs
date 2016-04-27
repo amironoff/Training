@@ -7,6 +7,7 @@ using System.Text;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Mvc.Html;
+using System.Web.Routing;
 using System.Web.WebPages;
 using Nop.Core;
 using Nop.Core.Infrastructure;
@@ -33,6 +34,7 @@ namespace Nop.Web.Framework
             builder.MergeAttribute("src", url);
             builder.MergeAttribute("alt", value);
             builder.MergeAttribute("title", value);
+            builder.MergeAttribute("class", "ico-help");
 
             // Render tag
             return MvcHtmlString.Create(builder.ToString());
@@ -60,12 +62,15 @@ namespace Nop.Web.Framework
                 if (localizationSupported)
                 {
                     var tabStrip = new StringBuilder();
-                    tabStrip.AppendLine(string.Format("<div id='{0}'>", name));
-                    tabStrip.AppendLine("<ul>");
+                    tabStrip.AppendLine(string.Format("<div id=\"{0}\" class=\"nav-tabs-custom\">", name));
+                    tabStrip.AppendLine("<ul class=\"nav nav-tabs\">");
 
                     //default tab
-                    tabStrip.AppendLine("<li class='k-state-active'>");
-                    tabStrip.AppendLine("Standard");
+                    tabStrip.AppendLine("<li class=\"active\">");
+                    tabStrip.AppendLine(
+                        string.Format(
+                            "<a data-tab-name=\"{0}-localized-tab\" href=\"#{0}-localized-tab\" data-toggle=\"tab\">{1}</a>",
+                            "standard", "Standard"));
                     tabStrip.AppendLine("</li>");
 
                     foreach (var locale in helper.ViewData.Model.Locales)
@@ -76,8 +81,12 @@ namespace Nop.Web.Framework
                         tabStrip.AppendLine("<li>");
                         var urlHelper = new UrlHelper(helper.ViewContext.RequestContext);
                         var iconUrl = urlHelper.Content("~/Content/images/flags/" + language.FlagImageFileName);
-                        tabStrip.AppendLine(string.Format("<img class='k-image' alt='' src='{0}'>", iconUrl));
-                        tabStrip.AppendLine(HttpUtility.HtmlEncode(language.Name));
+                        tabStrip.AppendLine(
+                            string.Format(
+                                "<a data-tab-name=\"{0}-localized-tab\" href=\"#{0}-localized-tab\" data-toggle=\"tab\"><img alt='' src='{1}'>{2}</a>",
+                                HttpUtility.HtmlEncode(language.Name).ToLower(), iconUrl,
+                                HttpUtility.HtmlEncode(language.Name)));
+
                         tabStrip.AppendLine("</li>");
                     }
                     tabStrip.AppendLine("</ul>");
@@ -85,30 +94,25 @@ namespace Nop.Web.Framework
 
 
                     //default tab
-                    tabStrip.AppendLine("<div>");
+                    tabStrip.AppendLine("<div class=\"tab-content\">");
+                    tabStrip.AppendLine("<div class=\"tab-pane active\" id=\"standard-localized-tab\">");
                     tabStrip.AppendLine(standardTemplate(helper.ViewData.Model).ToHtmlString());
                     tabStrip.AppendLine("</div>");
 
                     for (int i = 0; i < helper.ViewData.Model.Locales.Count; i++)
                     {
                         //languages
-                        tabStrip.AppendLine("<div>");
+                        var language =
+                            EngineContext.Current.Resolve<ILanguageService>()
+                                .GetLanguageById(helper.ViewData.Model.Locales[i].LanguageId);
+
+                        tabStrip.AppendLine(string.Format("<div class=\"tab-pane\" id=\"{0}-localized-tab\">",
+                            HttpUtility.HtmlEncode(language.Name).ToLower()));
                         tabStrip.AppendLine(localizedTemplate(i).ToHtmlString());
                         tabStrip.AppendLine("</div>");
                     }
                     tabStrip.AppendLine("</div>");
-                    tabStrip.AppendLine("<script>");
-                    tabStrip.AppendLine("$(document).ready(function() {");
-                    tabStrip.AppendLine(string.Format("$('#{0}').kendoTabStrip(", name));
-                    tabStrip.AppendLine("{");
-                    tabStrip.AppendLine("animation:  {");
-                    tabStrip.AppendLine("open: {");
-                    tabStrip.AppendLine("effects: \"fadeIn\"");
-                    tabStrip.AppendLine("}");
-                    tabStrip.AppendLine("}");
-                    tabStrip.AppendLine("});");
-                    tabStrip.AppendLine("});");
-                    tabStrip.AppendLine("</script>");
+                    tabStrip.AppendLine("</div>");
                     writer.Write(new MvcHtmlString(tabStrip.ToString()));
                 }
                 else
@@ -129,7 +133,7 @@ namespace Nop.Web.Framework
             if (String.IsNullOrEmpty(actionName))
                 actionName = "Delete";
 
-            var modalId =  MvcHtmlString.Create(helper.ViewData.ModelMetadata.ModelType.Name.ToLower() + "-delete-confirmation")
+            var modalId = MvcHtmlString.Create(helper.ViewData.ModelMetadata.ModelType.Name.ToLower() + "-delete-confirmation")
                 .ToHtmlString();
 
             var deleteConfirmationModel = new DeleteConfirmationModel
@@ -141,50 +145,17 @@ namespace Nop.Web.Framework
             };
 
             var window = new StringBuilder();
-            window.AppendLine(string.Format("<div id='{0}' style='display:none;'>", modalId));
+            window.AppendLine(string.Format("<div id='{0}' class=\"modal fade\"  tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"{0}-title\">", modalId));
             window.AppendLine(helper.Partial("Delete", deleteConfirmationModel).ToHtmlString());
             window.AppendLine("</div>");
+
             window.AppendLine("<script>");
             window.AppendLine("$(document).ready(function() {");
-            window.AppendLine(string.Format("$('#{0}').click(function (e) ", buttonsSelector));
-            window.AppendLine("{");
-            window.AppendLine("e.preventDefault();");
-            window.AppendLine(string.Format("var window = $('#{0}');", modalId));
-            window.AppendLine("if (!window.data('kendoWindow')) {");
-            window.AppendLine("window.kendoWindow({");
-            window.AppendLine("modal: true,");
-            window.AppendLine(string.Format("title: '{0}',", EngineContext.Current.Resolve<ILocalizationService>().GetResource("Admin.Common.AreYouSure")));
-            window.AppendLine("actions: ['Close']");
-            window.AppendLine("});");
-            window.AppendLine("}");
-            window.AppendLine("window.data('kendoWindow').center().open();");
-            window.AppendLine("});");
+            window.AppendLine(string.Format("$('#{0}').attr(\"data-toggle\", \"modal\").attr(\"data-target\", \"#{1}\")", buttonsSelector, modalId));
             window.AppendLine("});");
             window.AppendLine("</script>");
 
             return MvcHtmlString.Create(window.ToString());
-        }
-
-        public static MvcHtmlString NopLabelFor<TModel, TValue>(this HtmlHelper<TModel> helper, Expression<Func<TModel, TValue>> expression, bool displayHint = true)
-        {
-            var result = new StringBuilder();
-            var metadata = ModelMetadata.FromLambdaExpression(expression, helper.ViewData);
-            var hintResource = string.Empty;
-            object value;
-            if (metadata.AdditionalValues.TryGetValue("NopResourceDisplayName", out value))
-            {
-                var resourceDisplayName = value as NopResourceDisplayName;
-                if (resourceDisplayName != null && displayHint)
-                {
-                    var langId = EngineContext.Current.Resolve<IWorkContext>().WorkingLanguage.Id;
-                    hintResource = EngineContext.Current.Resolve<ILocalizationService>()
-                        .GetResource(resourceDisplayName.ResourceKey + ".Hint", langId);
-
-                    result.Append(helper.Hint(hintResource).ToHtmlString());
-                }
-            }
-            result.Append(helper.LabelFor(expression, new { title = hintResource }));
-            return MvcHtmlString.Create(result.ToString());
         }
 
         public static MvcHtmlString OverrideStoreCheckboxFor<TModel, TValue>(this HtmlHelper<TModel> helper,
@@ -260,31 +231,203 @@ namespace Nop.Web.Framework
             }
             return MvcHtmlString.Create(result.ToString());
         }
+        
+        /// <summary>
+        /// Render CSS styles of selected index 
+        /// </summary>
+        /// <param name="helper">HTML helper</param>
+        /// <param name="currentTabName">Current tab name (where appropriate CSS style should be rendred)</param>
+        /// <param name="content">Tab content</param>
+        /// <param name="isDefaultTab">Indicates that the tab is default</param>
+        /// <param name="tabNameToSelect">Tab name to select</param>
+        /// <returns>MvcHtmlString</returns>
+        public static MvcHtmlString RenderBootstrapTabContent(this HtmlHelper helper, string currentTabName,
+            HelperResult content, bool isDefaultTab = false, string tabNameToSelect = "")
+        {
+            if (helper == null)
+                throw new ArgumentNullException("helper");
+
+            if (string.IsNullOrEmpty(tabNameToSelect))
+                tabNameToSelect = helper.GetSelectedTabName();
+
+            if (string.IsNullOrEmpty(tabNameToSelect) && isDefaultTab)
+                tabNameToSelect = currentTabName;
+
+            var tag = new TagBuilder("div")
+            {
+                InnerHtml = content.ToHtmlString(),
+                Attributes =
+                {
+                    new KeyValuePair<string, string>("class", string.Format("tab-pane{0}", tabNameToSelect == currentTabName ? " active" : "")),
+                    new KeyValuePair<string, string>("id", string.Format("{0}", currentTabName))
+                }
+            };
+
+            return MvcHtmlString.Create(tag.ToString(TagRenderMode.Normal));
+        }
 
         /// <summary>
         /// Render CSS styles of selected index 
         /// </summary>
         /// <param name="helper">HTML helper</param>
-        /// <param name="currentIndex">Current tab index (where appropriate CSS style should be rendred)</param>
-        /// <param name="indexToSelect">Tab index to select</param>
+        /// <param name="currentTabName">Current tab name (where appropriate CSS style should be rendred)</param>
+        /// <param name="title">Tab title</param>
+        /// <param name="isDefaultTab">Indicates that the tab is default</param>
+        /// <param name="tabNameToSelect">Tab name to select</param>
         /// <returns>MvcHtmlString</returns>
-        public static MvcHtmlString RenderSelectedTabIndex(this HtmlHelper helper, int currentIndex, int indexToSelect)
+        public static MvcHtmlString RenderBootstrapTabHeader(this HtmlHelper helper, string currentTabName,
+            LocalizedString title, bool isDefaultTab = false, string tabNameToSelect = "")
         {
             if (helper == null)
                 throw new ArgumentNullException("helper");
 
-            //ensure it's not negative
-            if (indexToSelect < 0)
-                indexToSelect = 0;
-            
-            //required validation
-            if (indexToSelect == currentIndex)
-            {
-            return new MvcHtmlString(" class='k-state-active'");
-            }
+            if (string.IsNullOrEmpty(tabNameToSelect))
+                tabNameToSelect = helper.GetSelectedTabName();
 
-            return new MvcHtmlString("");
+            if (string.IsNullOrEmpty(tabNameToSelect) && isDefaultTab)
+                tabNameToSelect = currentTabName;
+
+            var a = new TagBuilder("a")
+            {
+                Attributes =
+                {
+                    new KeyValuePair<string, string>("data-tab-name", currentTabName),
+                    new KeyValuePair<string, string>("href", string.Format("#{0}", currentTabName)),
+                    new KeyValuePair<string, string>("data-toggle", "tab"),
+                },
+                InnerHtml = title.Text
+            };
+            var li = new TagBuilder("li")
+            {
+                Attributes =
+                {
+                    new KeyValuePair<string, string>("class", tabNameToSelect == currentTabName ? "active" : ""),
+                },
+                InnerHtml = a.ToString(TagRenderMode.Normal)
+            };
+
+            return MvcHtmlString.Create(li.ToString(TagRenderMode.Normal));
         }
+
+        /// <summary>
+        /// Gets a selected tab name (used in admin area to store selected tab name)
+        /// </summary>
+        /// <returns>Name</returns>
+        public static string GetSelectedTabName(this HtmlHelper helper)
+        {
+            //keep this method synchornized with
+            //"SaveSelectedTab" method of \Administration\Controllers\BaseAdminController.cs
+            var tabName = string.Empty;
+            const string dataKey = "nop.selected-tab-name";
+
+            if (helper.ViewData.ContainsKey(dataKey))
+                tabName = helper.ViewData[dataKey].ToString();
+
+            if (helper.ViewContext.Controller.TempData.ContainsKey(dataKey))
+                tabName = helper.ViewContext.Controller.TempData[dataKey].ToString();
+
+            return tabName;
+        }
+
+        #region Form fields
+
+        public static MvcHtmlString NopLabelFor<TModel, TValue>(this HtmlHelper<TModel> helper,
+                Expression<Func<TModel, TValue>> expression, bool displayHint = true)
+        {
+            var result = new StringBuilder();
+            var metadata = ModelMetadata.FromLambdaExpression(expression, helper.ViewData);
+            var hintResource = string.Empty;
+            object value;
+
+            if (metadata.AdditionalValues.TryGetValue("NopResourceDisplayName", out value))
+            {
+                var resourceDisplayName = value as NopResourceDisplayName;
+                if (resourceDisplayName != null && displayHint)
+                {
+                    var langId = EngineContext.Current.Resolve<IWorkContext>().WorkingLanguage.Id;
+                    hintResource = EngineContext.Current.Resolve<ILocalizationService>()
+                        .GetResource(resourceDisplayName.ResourceKey + ".Hint", langId);
+
+                    result.Append(helper.Hint(hintResource).ToHtmlString());
+                }
+            }
+            result.Append(helper.LabelFor(expression, new { title = hintResource, @class = "control-label" }));
+
+            return MvcHtmlString.Create(result.ToString());
+        }
+
+        public static MvcHtmlString NopEditorFor<TModel, TValue>(this HtmlHelper<TModel> helper,
+            Expression<Func<TModel, TValue>> expression, bool? renderFormControlClass = null)
+        {
+            var result = new StringBuilder();
+
+            object htmlAttributes = null;
+            var metadata = ModelMetadata.FromLambdaExpression(expression, helper.ViewData);
+            if ((!renderFormControlClass.HasValue && metadata.ModelType.Name.Equals("String")) ||
+                (renderFormControlClass.HasValue && renderFormControlClass.Value))
+                htmlAttributes = new { @class = "form-control" };
+
+            result.Append(helper.EditorFor(expression, new { htmlAttributes }));
+
+            return MvcHtmlString.Create(result.ToString());
+        }
+
+        public static MvcHtmlString NopDropDownList<TModel>(this HtmlHelper<TModel> helper, string name,
+            IEnumerable<SelectListItem> itemList, object htmlAttributes = null, bool renderFormControlClass = true)
+        {
+            var result = new StringBuilder();
+
+            var attrs = HtmlHelper.AnonymousObjectToHtmlAttributes(htmlAttributes);
+            if (renderFormControlClass)
+                attrs = AddFormControlClassToHtmlAttributes(attrs);
+
+            result.Append(helper.DropDownList(name, itemList, attrs));
+
+            return MvcHtmlString.Create(result.ToString());
+        }
+
+        public static MvcHtmlString NopDropDownListFor<TModel, TValue>(this HtmlHelper<TModel> helper,
+            Expression<Func<TModel, TValue>> expression, IEnumerable<SelectListItem> itemList,
+            object htmlAttributes = null, bool renderFormControlClass = true)
+        {
+            var result = new StringBuilder();
+
+            var attrs = HtmlHelper.AnonymousObjectToHtmlAttributes(htmlAttributes);
+            if (renderFormControlClass)
+                attrs = AddFormControlClassToHtmlAttributes(attrs);
+
+            result.Append(helper.DropDownListFor(expression, itemList, attrs));
+
+            return MvcHtmlString.Create(result.ToString());
+        }
+
+        public static MvcHtmlString NopTextAreaFor<TModel, TValue>(this HtmlHelper<TModel> helper,
+            Expression<Func<TModel, TValue>> expression, object htmlAttributes = null,
+            bool renderFormControlClass = true, int rows = 8, int columns = 20)
+        {
+            var result = new StringBuilder();
+
+            var attrs = HtmlHelper.AnonymousObjectToHtmlAttributes(htmlAttributes);
+            if (renderFormControlClass)
+                attrs = AddFormControlClassToHtmlAttributes(attrs);
+
+            result.Append(helper.TextAreaFor(expression, rows, columns, attrs));
+
+            return MvcHtmlString.Create(result.ToString());
+        }
+
+        public static RouteValueDictionary AddFormControlClassToHtmlAttributes(IDictionary<string, object> htmlAttributes)
+        {
+            if (htmlAttributes["class"] == null || string.IsNullOrEmpty(htmlAttributes["class"].ToString()))
+                htmlAttributes["class"] = "form-control";
+            else
+                if (!htmlAttributes["class"].ToString().Contains("form-control"))
+                htmlAttributes["class"] += " form-control";
+
+            return htmlAttributes as RouteValueDictionary;
+        }
+
+        #endregion
 
         #endregion
 
@@ -329,11 +472,13 @@ namespace Nop.Web.Framework
         /// <param name="selectedMonth">Selected month</param>
         /// <param name="selectedYear">Selected year</param>
         /// <param name="localizeLabels">Localize labels</param>
+        /// <param name="htmlAttributes">HTML attributes</param>
         /// <returns></returns>
         public static MvcHtmlString DatePickerDropDowns(this HtmlHelper html,
             string dayName, string monthName, string yearName,
             int? beginYear = null, int? endYear = null,
-            int? selectedDay = null, int? selectedMonth = null, int? selectedYear = null, bool localizeLabels = true)
+            int? selectedDay = null, int? selectedMonth = null, int? selectedYear = null,
+            bool localizeLabels = true, object htmlAttributes = null)
         {
             var daysList = new TagBuilder("select");
             var monthsList = new TagBuilder("select");
@@ -342,6 +487,11 @@ namespace Nop.Web.Framework
             daysList.Attributes.Add("name", dayName);
             monthsList.Attributes.Add("name", monthName);
             yearsList.Attributes.Add("name", yearName);
+
+            var htmlAttributesDictionary = HtmlHelper.AnonymousObjectToHtmlAttributes(htmlAttributes);
+            daysList.MergeAttributes(htmlAttributesDictionary, true);
+            monthsList.MergeAttributes(htmlAttributesDictionary, true);
+            yearsList.MergeAttributes(htmlAttributesDictionary, true);
 
             var days = new StringBuilder();
             var months = new StringBuilder();
@@ -372,7 +522,7 @@ namespace Nop.Web.Framework
             for (int i = 1; i <= 12; i++)
             {
                 months.AppendFormat("<option value='{0}'{1}>{2}</option>",
-                                    i, 
+                                    i,
                                     (selectedMonth.HasValue && selectedMonth.Value == i) ? " selected=\"selected\"" : null,
                                     CultureInfo.CurrentUICulture.DateTimeFormat.GetMonthName(i));
             }
@@ -405,9 +555,9 @@ namespace Nop.Web.Framework
             return MvcHtmlString.Create(string.Concat(daysList, monthsList, yearsList));
         }
 
-        public static MvcHtmlString Widget(this HtmlHelper helper, string widgetZone, object additionalData = null)
+        public static MvcHtmlString Widget(this HtmlHelper helper, string widgetZone, object additionalData = null, string area = null)
         {
-            return helper.Action("WidgetsByZone", "Widget", new { widgetZone = widgetZone, additionalData = additionalData });
+            return helper.Action("WidgetsByZone", "Widget", new { widgetZone = widgetZone, additionalData = additionalData, area = area });
         }
 
         /// <summary>
@@ -424,7 +574,7 @@ namespace Nop.Web.Framework
         {
             string htmlFieldName = ExpressionHelper.GetExpressionText(expression);
             var metadata = ModelMetadata.FromLambdaExpression(expression, html.ViewData);
-            string resolvedLabelText = metadata.DisplayName ?? (metadata.PropertyName ?? htmlFieldName.Split(new [] { '.' }).Last());
+            string resolvedLabelText = metadata.DisplayName ?? (metadata.PropertyName ?? htmlFieldName.Split(new[] { '.' }).Last());
             if (string.IsNullOrEmpty(resolvedLabelText))
             {
                 return MvcHtmlString.Empty;
@@ -437,7 +587,7 @@ namespace Nop.Web.Framework
             }
             tag.SetInnerText(resolvedLabelText);
 
-            var dictionary = ((IDictionary<string, object>)HtmlHelper.AnonymousObjectToHtmlAttributes(htmlAttributes));
+            var dictionary = HtmlHelper.AnonymousObjectToHtmlAttributes(htmlAttributes);
             tag.MergeAttributes(dictionary, true);
 
             return MvcHtmlString.Create(tag.ToString(TagRenderMode.Normal));
@@ -446,4 +596,3 @@ namespace Nop.Web.Framework
         #endregion
     }
 }
-

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Nop.Core.Configuration;
+﻿using Nop.Core.Configuration;
 
 namespace Nop.Core.Domain.Orders
 {
@@ -14,6 +13,12 @@ namespace Nop.Core.Domain.Orders
         /// Gets or sets a minimum order subtotal amount
         /// </summary>
         public decimal MinOrderSubtotalAmount { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether 'inimum order subtotal amount' option
+        /// should be evaluated over 'X' value including tax or not
+        /// </summary>
+        public bool MinOrderSubtotalAmountIncludingTax { get; set; }
 
         /// <summary>
         /// Gets or sets a minimum order total amount
@@ -72,17 +77,7 @@ namespace Nop.Core.Domain.Orders
         /// Gets or sets a value indicating whether "Return requests" are allowed
         /// </summary>
         public bool ReturnRequestsEnabled { get; set; }
-
-        /// <summary>
-        /// Gets or sets a list of return request reasons
-        /// </summary>
-        public List<string> ReturnRequestReasons { get; set; }
-
-        /// <summary>
-        /// Gets or sets a list of return request actions
-        /// </summary>
-        public List<string> ReturnRequestActions { get; set; }
-
+        
         /// <summary>
         /// Gets or sets a number of days that the Return Request Link will be available for customers after order placing.
         /// </summary>

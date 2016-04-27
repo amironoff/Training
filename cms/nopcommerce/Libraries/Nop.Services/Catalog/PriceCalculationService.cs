@@ -75,13 +75,12 @@ namespace Nop.Services.Catalog
         #region Utilities
 
         /// <summary>
-        /// Gets allowed discounts
+        /// Gets allowed discounts applied to product
         /// </summary>
         /// <param name="product">Product</param>
         /// <param name="customer">Customer</param>
         /// <returns>Discounts</returns>
-        protected virtual IList<Discount> GetAllowedDiscounts(Product product, 
-            Customer customer)
+        protected virtual IList<Discount> GetAllowedDiscountsAppliedToProduct(Product product, Customer customer)
         {
             var allowedDiscounts = new List<Discount>();
             if (_catalogSettings.IgnoreDiscounts)
@@ -92,28 +91,75 @@ namespace Nop.Services.Catalog
                 //we use this property ("HasDiscountsApplied") for performance optimziation to avoid unnecessary database calls
                 foreach (var discount in product.AppliedDiscounts)
                 {
-                    if (_discountService.IsDiscountValid(discount, customer) &&
+                    if (_discountService.ValidateDiscount(discount, customer).IsValid &&
                         discount.DiscountType == DiscountType.AssignedToSkus &&
                         !allowedDiscounts.ContainsDiscount(discount))
                         allowedDiscounts.Add(discount);
                 }
             }
 
-            //performance optimization
-            //load all category discounts just to ensure that we have at least one
-            if (_discountService.GetAllDiscounts(DiscountType.AssignedToCategories).Any())
+            return allowedDiscounts;
+        }
+
+        /// <summary>
+        /// Gets allowed discounts applied to categories
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Discounts</returns>
+        protected virtual IList<Discount> GetAllowedDiscountsAppliedToCategories(Product product, Customer customer)
+        {
+            var allowedDiscounts = new List<Discount>();
+            if (_catalogSettings.IgnoreDiscounts)
+                return allowedDiscounts;
+
+            foreach (var discount in _discountService.GetAllDiscounts(DiscountType.AssignedToCategories))
             {
-                var productCategories = _categoryService.GetProductCategoriesByProductId(product.Id);
-                foreach (var productCategory in productCategories)
+                //load identifier of categories with this discount applied to
+                var cacheKey = string.Format(PriceCacheEventConsumer.DISCOUNT_CATEGORY_IDS_MODEL_KEY,
+                    discount.Id,
+                    string.Join(",", customer.GetCustomerRoleIds()),
+                    _storeContext.CurrentStore.Id);
+                var appliedToCategoryIds = _cacheManager.Get(cacheKey, () =>
                 {
-                    var category = productCategory.Category;
-                    if (category.HasDiscountsApplied)
+                    var categoryIds = new List<int>();
+                    foreach (var category in discount.AppliedToCategories)
                     {
-                        //we use this property ("HasDiscountsApplied") for performance optimziation to avoid unnecessary database calls
-                        var categoryDiscounts = category.AppliedDiscounts;
-                        foreach (var discount in categoryDiscounts)
+                        if (!categoryIds.Contains(category.Id))
+                            categoryIds.Add(category.Id);
+                        if (discount.AppliedToSubCategories)
                         {
-                            if (_discountService.IsDiscountValid(discount, customer) &&
+                            //include subcategories
+                            foreach (var childCategoryId in _categoryService
+                                .GetAllCategoriesByParentCategoryId(category.Id, false, true)
+                                .Select(x => x.Id))
+                            {
+                                if (!categoryIds.Contains(childCategoryId))
+                                    categoryIds.Add(childCategoryId);
+                            }
+                        }
+                    }
+                    return categoryIds;
+                });
+
+                //compare with categories of this product
+                if (appliedToCategoryIds.Any())
+                {
+                    //load identifier of categories with this discount applied to
+                    var cacheKey2 = string.Format(PriceCacheEventConsumer.DISCOUNT_PRODUCT_CATEGORY_IDS_MODEL_KEY,
+                        product.Id,
+                        string.Join(",", customer.GetCustomerRoleIds()),
+                        _storeContext.CurrentStore.Id);
+                    var categoryIds = _cacheManager.Get(cacheKey2, () =>
+                        _categoryService
+                        .GetProductCategoriesByProductId(product.Id)
+                        .Select(x => x.CategoryId)
+                        .ToList());
+                    foreach (var id in categoryIds)
+                    {
+                        if (appliedToCategoryIds.Contains(id))
+                        {
+                            if (_discountService.ValidateDiscount(discount, customer).IsValid &&
                                 discount.DiscountType == DiscountType.AssignedToCategories &&
                                 !allowedDiscounts.ContainsDiscount(discount))
                                 allowedDiscounts.Add(discount);
@@ -122,21 +168,49 @@ namespace Nop.Services.Catalog
                 }
             }
 
-            //performance optimization
-            //load all manufacturer discounts just to ensure that we have at least one
-            if (_discountService.GetAllDiscounts(DiscountType.AssignedToManufacturers).Any())
+            return allowedDiscounts;
+        }
+
+        /// <summary>
+        /// Gets allowed discounts applied to manufacturers
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Discounts</returns>
+        protected virtual IList<Discount> GetAllowedDiscountsAppliedToManufacturers(Product product, Customer customer)
+        {
+            var allowedDiscounts = new List<Discount>();
+            if (_catalogSettings.IgnoreDiscounts)
+                return allowedDiscounts;
+
+            foreach (var discount in _discountService.GetAllDiscounts(DiscountType.AssignedToManufacturers))
             {
-                var productManufacturers = _manufacturerService.GetProductManufacturersByProductId(product.Id);
-                foreach (var productManufacturer in productManufacturers)
+                //load identifier of categories with this discount applied to
+                var cacheKey = string.Format(PriceCacheEventConsumer.DISCOUNT_MANUFACTURER_IDS_MODEL_KEY,
+                    discount.Id,
+                    string.Join(",", customer.GetCustomerRoleIds()),
+                    _storeContext.CurrentStore.Id);
+                var appliedToManufacturerIds = _cacheManager.Get(cacheKey,
+                    () => discount.AppliedToManufacturers.Select(x => x.Id).ToList());
+
+                //compare with manufacturers of this product
+                if (appliedToManufacturerIds.Any())
                 {
-                    var manufacturer = productManufacturer.Manufacturer;
-                    if (manufacturer.HasDiscountsApplied)
+                    //load identifier of categories with this discount applied to
+                    var cacheKey2 = string.Format(PriceCacheEventConsumer.DISCOUNT_PRODUCT_MANUFACTURER_IDS_MODEL_KEY,
+                        product.Id,
+                        string.Join(",", customer.GetCustomerRoleIds()),
+                        _storeContext.CurrentStore.Id);
+                    var manufacturerIds = _cacheManager.Get(cacheKey2, () =>
+                        _manufacturerService
+                        .GetProductManufacturersByProductId(product.Id)
+                        .Select(x => x.ManufacturerId)
+                        .ToList());
+                    foreach (var id in manufacturerIds)
                     {
-                        //we use this property ("HasDiscountsApplied") for performance optimziation to avoid unnecessary database calls
-                        var manufacturerDiscounts = manufacturer.AppliedDiscounts;
-                        foreach (var discount in manufacturerDiscounts)
+                        if (appliedToManufacturerIds.Contains(id))
                         {
-                            if (_discountService.IsDiscountValid(discount, customer) &&
+                            if (_discountService.ValidateDiscount(discount, customer).IsValid &&
                                 discount.DiscountType == DiscountType.AssignedToManufacturers &&
                                 !allowedDiscounts.ContainsDiscount(discount))
                                 allowedDiscounts.Add(discount);
@@ -144,6 +218,37 @@ namespace Nop.Services.Catalog
                     }
                 }
             }
+
+            return allowedDiscounts;
+        }
+
+        /// <summary>
+        /// Gets allowed discounts
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Discounts</returns>
+        protected virtual IList<Discount> GetAllowedDiscounts(Product product, Customer customer)
+        {
+            var allowedDiscounts = new List<Discount>();
+            if (_catalogSettings.IgnoreDiscounts)
+                return allowedDiscounts;
+
+            //discounts applied to products
+            foreach (var discount in GetAllowedDiscountsAppliedToProduct(product, customer))
+                if (!allowedDiscounts.ContainsDiscount(discount))
+                    allowedDiscounts.Add(discount);
+
+            //discounts applied to categories
+            foreach (var discount in GetAllowedDiscountsAppliedToCategories(product, customer))
+                if (!allowedDiscounts.ContainsDiscount(discount))
+                    allowedDiscounts.Add(discount);
+
+            //discounts applied to manufacturers
+            foreach (var discount in GetAllowedDiscountsAppliedToManufacturers(product, customer))
+                if (!allowedDiscounts.ContainsDiscount(discount))
+                    allowedDiscounts.Add(discount);
+
             return allowedDiscounts;
         }
         

@@ -190,7 +190,8 @@ namespace Nop.Admin.Controllers
             };
             return Json(gridModel);
         }
-        
+
+        [HttpPost]
         public ActionResult ApplyRate(string currencyCode, decimal rate)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCurrencies))
@@ -203,9 +204,11 @@ namespace Nop.Admin.Controllers
                 currency.UpdatedOnUtc = DateTime.UtcNow;
                 _currencyService.UpdateCurrency(currency);
             }
-            return RedirectToAction("List","Currency", new { liveRates = true });
+
+            return Json(new { result = true });
         }
 
+        [HttpPost]
         public ActionResult MarkAsPrimaryExchangeRateCurrency(int id)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCurrencies))
@@ -213,9 +216,11 @@ namespace Nop.Admin.Controllers
 
             _currencySettings.PrimaryExchangeRateCurrencyId = id;
             _settingService.SaveSetting(_currencySettings);
-            return RedirectToAction("List");
+
+            return Json(new { result = true });
         }
 
+        [HttpPost]
         public ActionResult MarkAsPrimaryStoreCurrency(int id)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCurrencies))
@@ -223,7 +228,8 @@ namespace Nop.Admin.Controllers
 
             _currencySettings.PrimaryStoreCurrencyId = id;
             _settingService.SaveSetting(_currencySettings);
-            return RedirectToAction("List");
+
+            return Json(new { result = true });
         }
 
         #endregion
@@ -264,7 +270,15 @@ namespace Nop.Admin.Controllers
                 SaveStoreMappings(currency, model);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Configuration.Currencies.Added"));
-                return continueEditing ? RedirectToAction("Edit", new { id = currency.Id }) : RedirectToAction("List");
+
+                if (continueEditing)
+                {
+                    //selected tab
+                    SaveSelectedTabName();
+
+                    return RedirectToAction("Edit", new { id = currency.Id });
+                }
+                return RedirectToAction("List");
             }
 
             //If we got this far, something failed, redisplay form
@@ -311,7 +325,7 @@ namespace Nop.Admin.Controllers
 
             if (ModelState.IsValid)
             {
-                //ensure we have at least one published language
+                //ensure we have at least one published currency
                 var allCurrencies = _currencyService.GetAllCurrencies();
                 if (allCurrencies.Count == 1 && allCurrencies[0].Id == currency.Id &&
                     !model.Published)
@@ -334,7 +348,7 @@ namespace Nop.Admin.Controllers
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
+                    SaveSelectedTabName();
 
                     return RedirectToAction("Edit", new {id = currency.Id});
                 }

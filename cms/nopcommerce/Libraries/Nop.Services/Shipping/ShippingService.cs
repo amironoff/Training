@@ -163,7 +163,6 @@ namespace Nop.Services.Shipping
 
         #region Shipping methods
 
-
         /// <summary>
         /// Deletes a shipping method
         /// </summary>
@@ -825,7 +824,8 @@ namespace Nop.Services.Shipping
                     .ToList();
             }
             if (shippingRateComputationMethods.Count == 0)
-                throw new NopException("Shipping rate computation method could not be loaded");
+                //throw new NopException("Shipping rate computation method could not be loaded");
+                return result;
 
 
 
@@ -877,12 +877,14 @@ namespace Nop.Services.Shipping
                     }
                 }
 
-                // add this scrm's options to the result
+                //add this scrm's options to the result
                 if (srcmShippingOptions != null)
                 {
                     foreach (var so in srcmShippingOptions)
                     {
-                        so.ShippingRateComputationMethodSystemName = srcm.PluginDescriptor.SystemName;
+                        //set system name if not set yet
+                        if (String.IsNullOrEmpty(so.ShippingRateComputationMethodSystemName))
+                            so.ShippingRateComputationMethodSystemName = srcm.PluginDescriptor.SystemName;
                         if (_shoppingCartSettings.RoundPricesDuringCalculation)
                             so.Rate = RoundingHelper.RoundPrice(so.Rate);
                         result.ShippingOptions.Add(so);

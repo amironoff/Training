@@ -152,20 +152,33 @@ namespace Nop.Web.Controllers
             if (command == null)
                 throw new ArgumentNullException("command");
 
-            pagingFilteringModel.AllowProductSorting = _catalogSettings.AllowProductSorting;
+            var allDisabled = _catalogSettings.ProductSortingEnumDisabled.Count == Enum.GetValues(typeof(ProductSortingEnum)).Length;
+            pagingFilteringModel.AllowProductSorting = _catalogSettings.AllowProductSorting && !allDisabled;
+
+            var activeOptions = Enum.GetValues(typeof(ProductSortingEnum)).Cast<int>()
+                .Except(_catalogSettings.ProductSortingEnumDisabled)
+                .Select((idOption) =>
+                {
+                    int order;
+                    return new KeyValuePair<int, int>(idOption, _catalogSettings.ProductSortingEnumDisplayOrder.TryGetValue(idOption, out order) ? order : idOption);
+                })
+                .OrderBy(x => x.Value);
+            if (command.OrderBy == null)
+                command.OrderBy = allDisabled ? 0 : activeOptions.First().Key;
+
             if (pagingFilteringModel.AllowProductSorting)
             {
-                foreach (ProductSortingEnum enumValue in Enum.GetValues(typeof(ProductSortingEnum)))
+                foreach (var option in activeOptions)
                 {
                     var currentPageUrl = _webHelper.GetThisPageUrl(true);
-                    var sortUrl = _webHelper.ModifyQueryString(currentPageUrl, "orderby=" + ((int)enumValue).ToString(), null);
+                    var sortUrl = _webHelper.ModifyQueryString(currentPageUrl, "orderby=" + (option.Key).ToString(), null);
 
-                    var sortValue = enumValue.GetLocalizedEnum(_localizationService, _workContext);
+                    var sortValue = ((ProductSortingEnum)option.Key).GetLocalizedEnum(_localizationService, _workContext);
                     pagingFilteringModel.AvailableSortOptions.Add(new SelectListItem
                     {
                         Text = sortValue,
                         Value = sortUrl,
-                        Selected = enumValue == (ProductSortingEnum)command.OrderBy
+                        Selected = option.Key == command.OrderBy
                     });
                 }
             }
@@ -335,7 +348,7 @@ namespace Nop.Web.Controllers
                 //load categories if null passed
                 //we implemeneted it this way for performance optimization - recursive iterations (below)
                 //this way all categories are loaded only once
-                allCategories = _categoryService.GetAllCategories();
+                allCategories = _categoryService.GetAllCategories(storeId: _storeContext.CurrentStore.Id);
             }
             var categories = allCategories.Where(c => c.ParentCategoryId == rootCategoryId).ToList();
             foreach (var category in categories)
@@ -497,6 +510,7 @@ namespace Nop.Web.Controllers
                         Id = x.Id,
                         Name = x.GetLocalized(y => y.Name),
                         SeName = x.GetSeName(),
+                        Description = x.GetLocalized(y => y.Description)
                     };
 
                     //prepare picture model
@@ -570,7 +584,8 @@ namespace Nop.Web.Controllers
             //products
             IList<int> alreadyFilteredSpecOptionIds = model.PagingFilteringContext.SpecificationFilter.GetAlreadyFilteredSpecOptionIds(_webHelper);
             IList<int> filterableSpecificationAttributeOptionIds;
-            var products = _productService.SearchProducts(out filterableSpecificationAttributeOptionIds, true,
+            var products = _productService.SearchProducts(out filterableSpecificationAttributeOptionIds,
+                true,
                 categoryIds: categoryIds,
                 storeId: _storeContext.CurrentStore.Id,
                 visibleIndividuallyOnly: true,
@@ -587,8 +602,11 @@ namespace Nop.Web.Controllers
 
             //specs
             model.PagingFilteringContext.SpecificationFilter.PrepareSpecsFilters(alreadyFilteredSpecOptionIds,
-                filterableSpecificationAttributeOptionIds, 
-                _specificationAttributeService, _webHelper, _workContext);
+                filterableSpecificationAttributeOptionIds != null ? filterableSpecificationAttributeOptionIds.ToArray() : null, 
+                _specificationAttributeService, 
+                _webHelper, 
+                _workContext,
+                _cacheManager);
             
 
             //template
@@ -602,6 +620,10 @@ namespace Nop.Web.Controllers
                         throw new Exception("No default template could be loaded");
                     return template.ViewPath;
                 });
+
+            //display "edit" (manage) link
+            if (_permissionService.Authorize(StandardPermissionProvider.AccessAdminPanel) && _permissionService.Authorize(StandardPermissionProvider.ManageCategories))
+                DisplayEditLink(Url.Action("Edit", "Category", new { id = category.Id, area = "Admin" }));
 
             //activity log
             _customerActivityService.InsertActivity("PublicStore.ViewCategory", _localizationService.GetResource("ActivityLog.PublicStore.ViewCategory"), category.Name);
@@ -654,7 +676,9 @@ namespace Nop.Web.Controllers
 
             //top menu topics
             string topicCacheKey = string.Format(ModelCacheEventConsumer.TOPIC_TOP_MENU_MODEL_KEY, 
-                _workContext.WorkingLanguage.Id, _storeContext.CurrentStore.Id);
+                _workContext.WorkingLanguage.Id,
+                _storeContext.CurrentStore.Id,
+                string.Join(",", _workContext.CurrentCustomer.GetCustomerRoleIds()));
             var cachedTopicModel = _cacheManager.Get(topicCacheKey, () =>
                 _topicService.GetAllTopics(_storeContext.CurrentStore.Id)
                 .Where(t => t.IncludeInTopMenu)
@@ -670,7 +694,7 @@ namespace Nop.Web.Controllers
             {
                 Categories = cachedCategoriesModel,
                 Topics = cachedTopicModel,
-                RecentlyAddedProductsEnabled = _catalogSettings.RecentlyAddedProductsEnabled,
+                NewProductsEnabled = _catalogSettings.NewProductsEnabled,
                 BlogEnabled = _blogSettings.Enabled,
                 ForumEnabled = _forumSettings.ForumsEnabled
             };
@@ -851,6 +875,10 @@ namespace Nop.Web.Controllers
                 return template.ViewPath;
             });
 
+            //display "edit" (manage) link
+            if (_permissionService.Authorize(StandardPermissionProvider.AccessAdminPanel) && _permissionService.Authorize(StandardPermissionProvider.ManageManufacturers))
+                DisplayEditLink(Url.Action("Edit", "Manufacturer", new { id = manufacturer.Id, area = "Admin" }));
+
             //activity log
             _customerActivityService.InsertActivity("PublicStore.ViewManufacturer", _localizationService.GetResource("ActivityLog.PublicStore.ViewManufacturer"), manufacturer.Name);
 
@@ -861,7 +889,7 @@ namespace Nop.Web.Controllers
         public ActionResult ManufacturerAll()
         {
             var model = new List<ManufacturerModel>();
-            var manufacturers = _manufacturerService.GetAllManufacturers();
+            var manufacturers = _manufacturerService.GetAllManufacturers(storeId: _storeContext.CurrentStore.Id);
             foreach (var manufacturer in manufacturers)
             {
                 var modelMan = manufacturer.ToModel();
@@ -902,7 +930,8 @@ namespace Nop.Web.Controllers
                 {
                     var currentManufacturer = _manufacturerService.GetManufacturerById(currentManufacturerId);
 
-                    var manufacturers = _manufacturerService.GetAllManufacturers(pageSize: _catalogSettings.ManufacturersBlockItemsToDisplay);
+                    var manufacturers = _manufacturerService.GetAllManufacturers(storeId: _storeContext.CurrentStore.Id, 
+                        pageSize: _catalogSettings.ManufacturersBlockItemsToDisplay);
                     var model = new ManufacturerNavigationModel
                     {
                         TotalManufacturers = manufacturers.TotalCount
@@ -986,6 +1015,10 @@ namespace Nop.Web.Controllers
 
             model.PagingFilteringContext.LoadPagedList(products);
 
+            //display "edit" (manage) link
+            if (_permissionService.Authorize(StandardPermissionProvider.AccessAdminPanel) && _permissionService.Authorize(StandardPermissionProvider.ManageVendors))
+                DisplayEditLink(Url.Action("Edit", "Vendor", new { id = vendor.Id, area = "Admin" }));
+
             return View(model);
         }
 
@@ -1011,6 +1044,21 @@ namespace Nop.Web.Controllers
                     SeName = vendor.GetSeName(),
                     AllowCustomersToContactVendors = _vendorSettings.AllowCustomersToContactVendors
                 };
+                //prepare picture model
+                int pictureSize = _mediaSettings.VendorThumbPictureSize;
+                var pictureCacheKey = string.Format(ModelCacheEventConsumer.VENDOR_PICTURE_MODEL_KEY, vendor.Id, pictureSize, true, _workContext.WorkingLanguage.Id, _webHelper.IsCurrentConnectionSecured(), _storeContext.CurrentStore.Id);
+                vendorModel.PictureModel = _cacheManager.Get(pictureCacheKey, () =>
+                {
+                    var picture = _pictureService.GetPictureById(vendor.PictureId);
+                    var pictureModel = new PictureModel
+                    {
+                        FullSizeImageUrl = _pictureService.GetPictureUrl(picture),
+                        ImageUrl = _pictureService.GetPictureUrl(picture, pictureSize),
+                        Title = string.Format(_localizationService.GetResource("Media.Vendor.ImageLinkTitleFormat"), vendorModel.Name),
+                        AlternateText = string.Format(_localizationService.GetResource("Media.Vendor.ImageAlternateTextFormat"), vendorModel.Name)
+                    };
+                    return pictureModel;
+                });
                 model.Add(vendorModel);
             }
 
@@ -1204,7 +1252,7 @@ namespace Nop.Web.Controllers
             {
                 var categoriesModel = new List<SearchModel.CategoryModel>();
                 //all categories
-                var allCategories = _categoryService.GetAllCategories();
+                var allCategories = _categoryService.GetAllCategories(storeId: _storeContext.CurrentStore.Id);
                 foreach (var c in allCategories)
                 {
                     //generate full category name (breadcrumb)
@@ -1244,7 +1292,7 @@ namespace Nop.Web.Controllers
                 }
             }
 
-            var manufacturers = _manufacturerService.GetAllManufacturers();
+            var manufacturers = _manufacturerService.GetAllManufacturers(storeId: _storeContext.CurrentStore.Id);
             if (manufacturers.Count > 0)
             {
                 model.AvailableManufacturers.Add(new SelectListItem
@@ -1259,6 +1307,27 @@ namespace Nop.Web.Controllers
                         Text = m.GetLocalized(x => x.Name),
                         Selected = model.mid == m.Id
                     });
+            }
+
+            model.asv = _vendorSettings.AllowSearchByVendor;
+            if (model.asv)
+            {
+                var vendors = _vendorService.GetAllVendors();
+                if (vendors.Count > 0)
+                {
+                    model.AvailableVendors.Add(new SelectListItem
+                    {
+                        Value = "0",
+                        Text = _localizationService.GetResource("Common.All")
+                    });
+                    foreach (var vendor in vendors)
+                        model.AvailableVendors.Add(new SelectListItem
+                        {
+                            Value = vendor.Id.ToString(),
+                            Text = vendor.GetLocalized(x => x.Name),
+                            Selected = model.vid == vendor.Id
+                        });
+                }
             }
 
             IPagedList<Product> products = new PagedList<Product>(new List<Product>(), 0, 1);
@@ -1276,6 +1345,7 @@ namespace Nop.Web.Controllers
                     decimal? minPriceConverted = null;
                     decimal? maxPriceConverted = null;
                     bool searchInDescriptions = false;
+                    int vendorId = 0;
                     if (model.adv)
                     {
                         //advanced search
@@ -1289,7 +1359,6 @@ namespace Nop.Web.Controllers
                                 categoryIds.AddRange(GetChildCategoryIds(categoryId));
                             }
                         }
-
 
                         manufacturerId = model.mid;
 
@@ -1307,6 +1376,9 @@ namespace Nop.Web.Controllers
                             if (decimal.TryParse(model.pt, out maxPrice))
                                 maxPriceConverted = _currencyService.ConvertToPrimaryStoreCurrency(maxPrice, _workContext.WorkingCurrency);
                         }
+
+                        if (model.asv)
+                            vendorId = model.vid;
 
                         searchInDescriptions = model.sid;
                     }
@@ -1329,7 +1401,8 @@ namespace Nop.Web.Controllers
                         languageId: _workContext.WorkingLanguage.Id,
                         orderBy: (ProductSortingEnum)command.OrderBy,
                         pageIndex: command.PageNumber - 1,
-                        pageSize: command.PageSize);
+                        pageSize: command.PageSize,
+                        vendorId: vendorId);
                     model.Products = PrepareProductOverviewModels(products).ToList();
 
                     model.NoResults = !model.Products.Any();
@@ -1362,7 +1435,8 @@ namespace Nop.Web.Controllers
                         SearchInDescriptions = searchInDescriptions,
                         CategoryIds = categoryIds,
                         ManufacturerId = manufacturerId,
-                        WorkingLanguageId = _workContext.WorkingLanguage.Id
+                        WorkingLanguageId = _workContext.WorkingLanguage.Id,
+                        VendorId = vendorId
                     });
                 }
             }

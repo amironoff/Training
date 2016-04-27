@@ -15,7 +15,7 @@
     <AssemblyName>Nop.Admin</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <MvcBuildViews>false</MvcBuildViews>
-    <UseIISExpress>false</UseIISExpress>
+    <UseIISExpress>true</UseIISExpress>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <UpgradeBackupLocation>
@@ -26,6 +26,9 @@
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
     <TargetFrameworkProfile />
+    <UseGlobalApplicationHostFile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -55,28 +58,47 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
     </Reference>
-    <Reference Include="AutoMapper, Version=3.3.1.0, Culture=neutral, PublicKeyToken=be96cd2c38ef1005, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\AutoMapper.3.3.1\lib\net40\AutoMapper.dll</HintPath>
+    <Reference Include="AutoMapper, Version=4.2.1.0, Culture=neutral, PublicKeyToken=be96cd2c38ef1005, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\AutoMapper.4.2.1\lib\net45\AutoMapper.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="AutoMapper.Net4, Version=3.3.1.0, Culture=neutral, PublicKeyToken=be96cd2c38ef1005, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\AutoMapper.3.3.1\lib\net40\AutoMapper.Net4.dll</HintPath>
+    <Reference Include="FluentValidation, Version=6.2.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\FluentValidation.6.2.1.0\lib\Net45\FluentValidation.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="FluentValidation, Version=5.6.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\FluentValidation.5.6.2.0\lib\Net45\FluentValidation.dll</HintPath>
+    <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Bcl.Async.1.0.168\lib\net40\Microsoft.Threading.Tasks.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Threading.Tasks.Extensions, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Bcl.Async.1.0.168\lib\net40\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Threading.Tasks.Extensions.Desktop, Version=1.0.168.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Bcl.Async.1.0.168\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <Private>True</Private>
       <HintPath>..\..\..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.Extensions, Version=2.2.29.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Net.Http.2.2.29\lib\net45\System.Net.Http.Extensions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Net.Http.Primitives, Version=4.2.29.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Net.Http.2.2.29\lib\net45\System.Net.Http.Primitives.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
@@ -185,13 +207,14 @@
     <Compile Include="Controllers\ProductController.cs" />
     <Compile Include="Controllers\QueuedEmailController.cs" />
     <Compile Include="Extensions\AttributeParserHelper.cs" />
-    <Compile Include="Extensions\HtmlExtensions.cs" />
+    <Compile Include="Infrastructure\Mapper\AutoMapperConfiguration.cs" />
     <Compile Include="Infrastructure\Cache\ModelCacheEventConsumer.cs" />
     <Compile Include="Infrastructure\DependencyRegistrar.cs" />
     <Compile Include="Extensions\MappingExtensions.cs" />
-    <Compile Include="Infrastructure\AutoMapperStartupTask.cs" />
+    <Compile Include="Infrastructure\Mapper\AutoMapperStartupTask.cs" />
     <Compile Include="Models\Affiliates\AffiliateListModel.cs" />
     <Compile Include="Models\Affiliates\AffiliatedOrderListModel.cs" />
+    <Compile Include="Models\Catalog\ProductAttributeConditionModel.cs" />
     <Compile Include="Models\Catalog\AddProductAttributeCombinationModel.cs" />
     <Compile Include="Models\Catalog\LowStockProductModel.cs" />
     <Compile Include="Models\Catalog\BulkEditProductModel.cs" />
@@ -215,12 +238,17 @@
     <Compile Include="Models\Customers\CustomerAttributeValueModel.cs" />
     <Compile Include="Models\Discounts\DiscountListModel.cs" />
     <Compile Include="Models\Home\DashboardModel.cs" />
+    <Compile Include="Models\Localization\LanguageResourcesListModel.cs" />
     <Compile Include="Models\Messages\TestMessageTemplateModel.cs" />
     <Compile Include="Models\Orders\CountryReportLineModel.cs" />
     <Compile Include="Models\Orders\CountryReportModel.cs" />
     <Compile Include="Models\Payments\PaymentMethodRestrictionModel.cs" />
     <Compile Include="Models\Plugins\OfficialFeedListModel.cs" />
     <Compile Include="Models\Plugins\PluginListModel.cs" />
+    <Compile Include="Models\Settings\AllSettingsListModel.cs" />
+    <Compile Include="Models\Settings\ReturnRequestActionModel.cs" />
+    <Compile Include="Models\Settings\ReturnRequestReasonModel.cs" />
+    <Compile Include="Models\Settings\SortOptionModel.cs" />
     <Compile Include="Models\Settings\VendorSettingsModel.cs" />
     <Compile Include="Models\Shipping\WarehouseModel.cs" />
     <Compile Include="Models\Shipping\DeliveryDateModel.cs" />
@@ -336,6 +364,9 @@
     <Compile Include="Validators\Customers\CustomerAttributeValidator.cs" />
     <Compile Include="Validators\Customers\CustomerAttributeValueValidator.cs" />
     <Compile Include="Validators\Messages\TestMessageTemplateValidator.cs" />
+    <Compile Include="Validators\Orders\ReturnRequestValidator.cs" />
+    <Compile Include="Validators\Settings\ReturnRequestActionValidator.cs" />
+    <Compile Include="Validators\Settings\ReturnRequestReasonValidator.cs" />
     <Compile Include="Validators\Templates\TopicTemplateValidator.cs" />
     <Compile Include="Validators\Templates\ProductTemplateValidator.cs" />
     <Compile Include="Validators\Templates\ManufacturerTemplateValidator.cs" />
@@ -346,6 +377,7 @@
     <Compile Include="Validators\Common\AddressValidator.cs" />
     <Compile Include="Validators\Shipping\WarehouseValidator.cs" />
     <Compile Include="Validators\Shipping\DeliveryDateValidator.cs" />
+    <Compile Include="Validators\ValidatorUtilities.cs" />
     <Compile Include="Validators\Vendors\VendorValidator.cs" />
     <Compile Include="Validators\Stores\StoreValidator.cs" />
     <Compile Include="Validators\Tasks\ScheduleTaskValidator.cs" />
@@ -387,8 +419,70 @@
     <Compile Include="Validators\Catalog\ProductValidator.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\adminLTE\AdminLTE-2.3.0.css" />
+    <Content Include="Content\adminLTE\AdminLTE-2.3.0.min.css" />
+    <Content Include="Content\adminLTE\img\avatar.png" />
+    <Content Include="Content\adminLTE\img\avatar04.png" />
+    <Content Include="Content\adminLTE\img\avatar2.png" />
+    <Content Include="Content\adminLTE\img\avatar3.png" />
+    <Content Include="Content\adminLTE\img\avatar5.png" />
+    <Content Include="Content\adminLTE\img\boxed-bg.jpg" />
+    <Content Include="Content\adminLTE\img\boxed-bg.png" />
+    <Content Include="Content\adminLTE\img\credit\american-express.png" />
+    <Content Include="Content\adminLTE\img\credit\cirrus.png" />
+    <Content Include="Content\adminLTE\img\credit\mastercard.png" />
+    <Content Include="Content\adminLTE\img\credit\mestro.png" />
+    <Content Include="Content\adminLTE\img\credit\paypal.png" />
+    <Content Include="Content\adminLTE\img\credit\paypal2.png" />
+    <Content Include="Content\adminLTE\img\credit\visa.png" />
+    <Content Include="Content\adminLTE\img\default-50x50.gif" />
+    <Content Include="Content\adminLTE\img\icons.png" />
+    <Content Include="Content\adminLTE\img\photo1.png" />
+    <Content Include="Content\adminLTE\img\photo2.png" />
+    <Content Include="Content\adminLTE\img\photo3.jpg" />
+    <Content Include="Content\adminLTE\img\photo4.jpg" />
+    <Content Include="Content\adminLTE\img\user1-128x128.jpg" />
+    <Content Include="Content\adminLTE\img\user2-160x160.jpg" />
+    <Content Include="Content\adminLTE\img\user3-128x128.jpg" />
+    <Content Include="Content\adminLTE\img\user4-128x128.jpg" />
+    <Content Include="Content\adminLTE\img\user5-128x128.jpg" />
+    <Content Include="Content\adminLTE\img\user6-128x128.jpg" />
+    <Content Include="Content\adminLTE\img\user7-128x128.jpg" />
+    <Content Include="Content\adminLTE\img\user8-128x128.jpg" />
+    <Content Include="Content\adminLTE\skins\skin-black-light.css" />
+    <Content Include="Content\adminLTE\skins\skin-black-light.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-black.css" />
+    <Content Include="Content\adminLTE\skins\skin-black.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-blue-light.css" />
+    <Content Include="Content\adminLTE\skins\skin-blue-light.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-blue.css" />
+    <Content Include="Content\adminLTE\skins\skin-blue.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-green-light.css" />
+    <Content Include="Content\adminLTE\skins\skin-green-light.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-green.css" />
+    <Content Include="Content\adminLTE\skins\skin-green.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-purple-light.css" />
+    <Content Include="Content\adminLTE\skins\skin-purple-light.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-purple.css" />
+    <Content Include="Content\adminLTE\skins\skin-purple.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-red-light.css" />
+    <Content Include="Content\adminLTE\skins\skin-red-light.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-red.css" />
+    <Content Include="Content\adminLTE\skins\skin-red.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-yellow-light.css" />
+    <Content Include="Content\adminLTE\skins\skin-yellow-light.min.css" />
+    <Content Include="Content\adminLTE\skins\skin-yellow.css" />
+    <Content Include="Content\adminLTE\skins\skin-yellow.min.css" />
+    <Content Include="Content\adminLTE\skins\_all-skins.css" />
+    <Content Include="Content\adminLTE\skins\_all-skins.min.css" />
+    <Content Include="Content\bootstrap\bootstrap-3.3.5.css" />
+    <Content Include="Content\bootstrap\bootstrap-3.3.5.min.css" />
+    <Content Include="Content\fontAwesome\font-awesome-4.4.0.css" />
+    <Content Include="Content\fontAwesome\font-awesome-4.4.0.min.css" />
+    <Content Include="Content\images\logo-mini.png" />
+    <Content Include="Content\images\logo.png" />
+    <Content Include="db_backups\placeholder.txt" />
     <Content Include="Content\images\ajax_loader_small.gif" />
-    <Content Include="Content\styles.rtl.css" />
     <Content Include="Content\images\1pix.gif" />
     <Content Include="Content\images\admin-gvw-bg.gif" />
     <Content Include="Content\images\admin-header-bg.gif" />
@@ -399,7 +493,6 @@
     <Content Include="Content\images\error-message.gif" />
     <Content Include="Content\images\google-maps.gif" />
     <Content Include="Content\images\grey_button_bg.gif" />
-    <Content Include="Content\images\grid_header_back.png" />
     <Content Include="Content\images\ico-blacklist.png" />
     <Content Include="Content\images\ico-catalog.png" />
     <Content Include="Content\images\ico-configuration.png" />
@@ -423,6 +516,7 @@
     <Content Include="Content\images\warnings-tick.png" />
     <Content Include="Content\images\warnings-warning.png" />
     <Content Include="Content\styles.css" />
+    <Content Include="Content\fonts\fontawesome-webfont.svg" />
     <Content Include="sitemap.config">
       <SubType>Designer</SubType>
     </Content>
@@ -440,7 +534,6 @@
     <Content Include="Views\Language\Create.cshtml" />
     <Content Include="Views\Language\Edit.cshtml" />
     <Content Include="Views\Language\List.cshtml" />
-    <Content Include="Views\Language\Resources.cshtml" />
     <Content Include="Views\Language\_CreateOrUpdate.cshtml" />
     <Content Include="Views\Log\List.cshtml" />
     <Content Include="Views\Shared\Delete.cshtml" />
@@ -932,7 +1025,22 @@
     <Content Include="Views\Common\LanguageSelector.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Views\Product\_ProductAttributes.cshtml" />
+    <Content Include="Content\fonts\FontAwesome.otf" />
+    <Content Include="Content\fonts\fontawesome-webfont.woff2" />
+    <Content Include="Content\fonts\fontawesome-webfont.woff" />
+    <Content Include="Content\fonts\fontawesome-webfont.ttf" />
+    <Content Include="Content\fonts\fontawesome-webfont.eot" />
+    <Content Include="Content\bootstrap\bootstrap-3.3.5.css.map" />
+    <None Include="Views\Product\_ProductAttributes.cshtml" />
+    <Content Include="Views\Setting\_ReturnRequestReasons.cshtml" />
+    <Content Include="Views\Setting\ReturnRequestReasonEdit.cshtml" />
+    <Content Include="Views\Setting\ReturnRequestReasonCreate.cshtml" />
+    <Content Include="Views\Setting\_CreateOrUpdate.ReturnRequestReason.cshtml" />
+    <Content Include="Views\Setting\_CreateOrUpdate.ReturnRequestAction.cshtml" />
+    <Content Include="Views\Setting\_ReturnRequestActions.cshtml" />
+    <Content Include="Views\Setting\ReturnRequestActionCreate.cshtml" />
+    <Content Include="Views\Setting\ReturnRequestActionEdit.cshtml" />
+    <Content Include="Views\Shared\EditorTemplates\MultiSelect.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Views\Product\AddAttributeCombinationPopup.cshtml" />
@@ -1290,6 +1398,10 @@
   <ItemGroup>
     <Content Include="Views\Common\AclDisabledWarning.cshtml" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Product\ProductAttributeConditionPopup.cshtml" />
+  </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
@@ -1310,19 +1422,24 @@
     <VisualStudio>
       <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
         <WebProjectProperties>
-          <UseIIS>False</UseIIS>
+          <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>2454</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>
-          </IISUrl>
+          <IISUrl>http://localhost:2454/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
-          <UseCustomServer>True</UseCustomServer>
+          <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>http://www.nopcommerce.com/</CustomServerUrl>
           <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
         </WebProjectProperties>
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
-  <Import Project="..\..\..\packages\AutoMapper.3.3.1\tools\AutoMapper.targets" Condition="Exists('..\..\..\packages\AutoMapper.3.3.1\tools\AutoMapper.targets')" />
+  <Import Project="..\..\..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets" Condition="Exists('..\..\..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets'))" />
+  </Target>
 </Project>

@@ -123,9 +123,11 @@ namespace Nop.Admin.Models.Catalog
 
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.IsGiftCard")]
         public bool IsGiftCard { get; set; }
-
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.GiftCardType")]
         public int GiftCardTypeId { get; set; }
+        [NopResourceDisplayName("Admin.Catalog.Products.Fields.OverriddenGiftCardAmount")]
+        [UIHint("DecimalNullable")]
+        public decimal? OverriddenGiftCardAmount { get; set; }
 
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.RequireOtherProducts")]
         public bool RequireOtherProducts { get; set; }
@@ -265,6 +267,9 @@ namespace Nop.Admin.Models.Catalog
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.AllowAddingOnlyExistingAttributeCombinations")]
         public bool AllowAddingOnlyExistingAttributeCombinations { get; set; }
 
+        [NopResourceDisplayName("Admin.Catalog.Products.Fields.NotReturnable")]
+        public bool NotReturnable { get; set; }
+
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.DisableBuyButton")]
         public bool DisableBuyButton { get; set; }
 
@@ -322,7 +327,18 @@ namespace Nop.Admin.Models.Catalog
         public decimal BasepriceBaseAmount { get; set; }
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.BasepriceBaseUnit")]
         public int BasepriceBaseUnitId { get; set; }
-        public IList<SelectListItem> AvailableBasepriceBaseUnits { get; set; } 
+        public IList<SelectListItem> AvailableBasepriceBaseUnits { get; set; }
+
+
+        [NopResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNew")]
+        public bool MarkAsNew { get; set; }
+        [NopResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNewStartDateTimeUtc")]
+        [UIHint("DateTimeNullable")]
+        public DateTime? MarkAsNewStartDateTimeUtc { get; set; }
+        [NopResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNewEndDateTimeUtc")]
+        [UIHint("DateTimeNullable")]
+        public DateTime? MarkAsNewEndDateTimeUtc { get; set; }
+
 
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.Weight")]
         public decimal Weight { get; set; }
@@ -750,24 +766,27 @@ namespace Nop.Admin.Models.Catalog
             //validation fields
             [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules")]
             public bool ValidationRulesAllowed { get; set; }
-
             [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.MinLength")]
             [UIHint("Int32Nullable")]
             public int? ValidationMinLength { get; set; }
-
             [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.MaxLength")]
             [UIHint("Int32Nullable")]
             public int? ValidationMaxLength { get; set; }
-
+            [AllowHtml]
             [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.FileAllowedExtensions")]
             public string ValidationFileAllowedExtensions { get; set; }
-
             [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.FileMaximumSize")]
             [UIHint("Int32Nullable")]
             public int? ValidationFileMaximumSize { get; set; }
-
+            [AllowHtml]
             [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.DefaultValue")]
             public string DefaultValue { get; set; }
+            public string ValidationRulesString { get; set; }
+            
+            //condition
+            [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.Condition")]
+            public bool ConditionAllowed { get; set; }
+            public string ConditionString { get; set; }
         }
         public partial class ProductAttributeValueListModel : BaseNopModel
         {
@@ -808,6 +827,11 @@ namespace Nop.Admin.Models.Catalog
             [AllowHtml]
             public string ColorSquaresRgb { get; set; }
             public bool DisplayColorSquaresRgb { get; set; }
+
+            [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.ImageSquaresPicture")]
+            [UIHint("Picture")]
+            public int ImageSquaresPictureId { get; set; }
+            public bool DisplayImageSquaresPicture { get; set; }
 
             [NopResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.PriceAdjustment")]
             public decimal PriceAdjustment { get; set; }

@@ -29,7 +29,7 @@
             {
                 <a class="watch-forum" href="#" id="watch-forum">@Model.WatchForumText</a>
                 <script type="text/javascript">
-                    $(function () {
+                    $(document).ready(function () {
                         $('#watch-forum').click(function () {
                             $.ajax({
                                 cache: false,
@@ -140,7 +140,7 @@
                                         @if (topic.CustomerId > 0)
                                         {
                                             <label>@T("Forum.Author"):</label>
-                                            if (topic.AllowViewingProfiles && !topic.IsCustomerGuest)
+                                            if (topic.AllowViewingProfiles)
                                             {
                                             @Html.RouteLink(topic.CustomerName, "CustomerProfile", new { Id = topic.CustomerId })
                                             }
