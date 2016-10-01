@@ -21,6 +21,12 @@ namespace AnalyticsApi.Controllers
             _repo = repo;
         }
 
+        [HttpGet]
+        public IHttpActionResult Index()
+        {
+            return Ok();
+        }
+
         // api/send
         [HttpPut]
         [ResponseType(typeof(AlbumDetails))]
